@@ -16,7 +16,9 @@
     "target": "es2022",
     "customConditions": ["@org/source"],
     "paths": {
-      "@org/ui": ["libs/ui/src/index.ts"]
+      "@org/ui": ["libs/ui/src/index.ts"],
+      "@org/zod-schemas": ["libs/shared/zod-schemas/src/index.ts"],
+      "@org/types": ["libs/shared/types/src/index.ts"]
     }
   }
 }

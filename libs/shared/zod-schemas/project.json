@@ -1,0 +1,19 @@
+{
+  "name": "zod-schemas",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/shared/zod-schemas/src",
+  "projectType": "library",
+  "tags": [],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/shared/zod-schemas",
+        "main": "libs/shared/zod-schemas/src/index.ts",
+        "tsConfig": "libs/shared/zod-schemas/tsconfig.lib.json",
+        "assets": ["libs/shared/zod-schemas/*.md"]
+      }
+    }
+  }
+}
