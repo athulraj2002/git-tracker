@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "baseUrl": ".",
     "importHelpers": true,
     "isolatedModules": true,
     "lib": ["es2022", "DOM"],
@@ -13,6 +14,9 @@
     "skipLibCheck": true,
     "strict": true,
     "target": "es2022",
-    "customConditions": ["@org/source"]
+    "customConditions": ["@org/source"],
+    "paths": {
+      "@org/ui": ["libs/ui/src/index.ts"]
+    }
   }
 }
