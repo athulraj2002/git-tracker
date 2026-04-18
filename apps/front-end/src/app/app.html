@@ -1,6 +1,11 @@
-<lib-ui-button variant="primary">Get Started</lib-ui-button>
-<lib-ui-button variant="secondary">Learn More</lib-ui-button>
-<lib-ui-button variant="danger" [disabled]="true">Delete</lib-ui-button>
 
+<div class="flex gap-3 p-3">
+  <lib-ui-button variant="primary">Get Started  <lib-ui-spinner></lib-ui-spinner></lib-ui-button>
+  <lib-ui-button variant="secondary">Learn More</lib-ui-button>
+  <lib-ui-button variant="ghost">Ghost</lib-ui-button>
+  <lib-ui-button variant="outline">Outline</lib-ui-button>
+  <lib-ui-button variant="danger">Delete</lib-ui-button>
+
+</div>
 
 <router-outlet></router-outlet>

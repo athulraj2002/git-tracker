@@ -1,14 +1,16 @@
-import { Component, Input } from '@angular/core';
+import { Component, input, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'danger';
+export type ButtonVariant = 'primary' | 'secondary' | 'danger'|'ghost'|'outline';
 
 const variantClasses: Record<ButtonVariant, string> = {
   primary:
-    'bg-blue-600 text-white hover:bg-blue-700 focus-visible:ring-blue-500',
+    'bg-black text-white hover:bg-black/90',
   secondary:
-    'bg-gray-200 text-gray-900 hover:bg-gray-300 focus-visible:ring-gray-400',
-  danger: 'bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-500',
+    'bg-gray-200 text-gray-900 hover:bg-gray-300 ',
+  danger: 'bg-red-200 text-red-600 hover:bg-red-300 ',
+  ghost:'text-black dark:text-white hover hover:bg-gray-200 dark:hover:bg-gray-800',
+  outline:'border !border-gray-300 text-black dark:text-white hover:bg-gray-300 dark:hover:bg-gray-800'
 };
 
 @Component({
@@ -16,19 +18,31 @@ const variantClasses: Record<ButtonVariant, string> = {
   imports: [CommonModule],
   templateUrl: './button.html',
 })
-export class Button {
-  @Input() variant: ButtonVariant = 'primary';
-  @Input() disabled = false;
-  @Input() type: 'button' | 'submit' | 'reset' = 'button';
 
-  get classes(): string {
-    return [
-      'inline-flex items-center justify-center',
-      'px-4 py-2 rounded-md text-sm font-medium',
+/**
+ *
+ * Reusable UI button component with variant-based styling.
+ *
+ * @input variant Visual style of the button. Defaults to `primary`.
+ *
+ * @input disabled Disables the button when set to `true`.
+ *
+ * @input type Native button type. Defaults to `button`.
+ *
+ */
+export class Button {
+  variant = input<ButtonVariant>('primary');
+  disabled = input<boolean>();
+  type = input<'button' | 'submit' | 'reset'>('button');
+
+  classes = computed(() =>
+    [
+      'inline-flex items-center gap-2 justify-center border border-transparent',
+      'p-2.5 rounded-[10px] text-sm h-10  cursor-pointer',
       'transition-colors duration-200',
       'focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
       'disabled:opacity-50 disabled:cursor-not-allowed',
-      variantClasses[this.variant],
-    ].join(' ');
-  }
+      variantClasses[this.variant()],
+    ].join(' '),
+  );
 }
