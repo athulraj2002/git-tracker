@@ -1,1 +1,11 @@
 @import 'tailwindcss';
+
+@theme {
+  --color-dark100: #2d2f33;
+  --color-dark200: #1e1f22;
+  --color-dark300: #17181a;
+}
+
+body {
+  @apply bg-gray-100 text-gray-800 dark:bg-dark300 dark:text-gray-100;
+}
