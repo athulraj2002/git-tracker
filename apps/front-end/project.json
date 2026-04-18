@@ -56,7 +56,11 @@
           "buildTarget": "front-end:build:development"
         }
       },
-      "defaultConfiguration": "development"
+      "defaultConfiguration": "development",
+      "dependsOn": ["@org/api:serve"],
+      "options": {
+        "proxyConfig": "apps/front-end/proxy.conf.json"
+      }
     },
     "lint": {
       "executor": "@nx/eslint:lint"
