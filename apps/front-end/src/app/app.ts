@@ -2,7 +2,6 @@ import { Component } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { Button } from '@org/ui';
 
-
 @Component({
   imports: [RouterModule, Button],
   selector: 'app-root',
