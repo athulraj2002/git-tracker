@@ -48,7 +48,8 @@
   },
   "workspaces": [
     "packages/*",
-    "apps/*"
+    "apps/*",
+    "libs/**"
   ],
   "dependencies": {
     "@angular/common": "~21.2.0",
