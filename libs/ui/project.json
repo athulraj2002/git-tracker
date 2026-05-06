@@ -31,16 +31,24 @@
     "storybook": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "ng run ui:storybook",
-        "cwd": "."
+        "command": "node tools/storybook/run-angular-storybook.cjs --mode=dev --project=ui --configDir=libs/ui/.storybook --tsConfig=libs/ui/.storybook/tsconfig.json --browserTarget=ui:build --style=libs/ui/.storybook/preview.css --port=4400"
+      },
+      "configurations": {
+        "ci": {
+          "command": "node tools/storybook/run-angular-storybook.cjs --mode=dev --project=ui --configDir=libs/ui/.storybook --tsConfig=libs/ui/.storybook/tsconfig.json --browserTarget=ui:build --style=libs/ui/.storybook/preview.css --port=4400 --ci --noOpen --quiet"
+        }
       }
     },
     "build-storybook": {
       "executor": "nx:run-commands",
       "outputs": ["{workspaceRoot}/dist/storybook/ui"],
       "options": {
-        "command": "ng run ui:build-storybook",
-        "cwd": "."
+        "command": "node tools/storybook/run-angular-storybook.cjs --mode=static --project=ui --configDir=libs/ui/.storybook --tsConfig=libs/ui/.storybook/tsconfig.json --browserTarget=ui:build --style=libs/ui/.storybook/preview.css --outputDir=dist/storybook/ui"
+      },
+      "configurations": {
+        "ci": {
+          "command": "node tools/storybook/run-angular-storybook.cjs --mode=static --project=ui --configDir=libs/ui/.storybook --tsConfig=libs/ui/.storybook/tsconfig.json --browserTarget=ui:build --style=libs/ui/.storybook/preview.css --outputDir=dist/storybook/ui --quiet"
+        }
       }
     }
   }

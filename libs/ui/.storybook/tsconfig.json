@@ -4,16 +4,7 @@
     "emitDecoratorMetadata": true,
     "types": ["node"]
   },
-  "files": [
-    "main.ts",
-    "preview.ts"
-  ],
-  "include": [
-    "../src/**/*.ts",
-    "../src/**/*.stories.ts"
-  ],
-  "exclude": [
-    "../**/*.spec.ts",
-    "*.css"
-  ]
+  "files": ["main.ts", "preview.ts"],
+  "include": ["../src/**/*.ts", "../src/**/*.stories.ts"],
+  "exclude": ["../**/*.spec.ts", "*.css"]
 }
