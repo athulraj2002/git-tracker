@@ -1,0 +1,43 @@
+{
+  "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
+  "version": 1,
+  "projects": {
+    "ui": {
+      "projectType": "library",
+      "root": "libs/ui",
+      "sourceRoot": "libs/ui/src",
+      "prefix": "lib",
+      "architect": {
+        "build": {
+          "builder": "@angular-devkit/build-angular:ng-packagr",
+          "options": {
+            "project": "libs/ui/ng-package.json",
+            "tsConfig": "libs/ui/tsconfig.lib.json"
+          }
+        },
+        "storybook": {
+          "builder": "@storybook/angular:start-storybook",
+          "options": {
+            "configDir": "libs/ui/.storybook",
+            "browserTarget": "ui:build",
+            "tsConfig": "libs/ui/.storybook/tsconfig.json",
+            "styles": ["libs/ui/.storybook/preview.css"],
+            "port": 4400,
+            "compodoc": false
+          }
+        },
+        "build-storybook": {
+          "builder": "@storybook/angular:build-storybook",
+          "options": {
+            "configDir": "libs/ui/.storybook",
+            "browserTarget": "ui:build",
+            "tsConfig": "libs/ui/.storybook/tsconfig.json",
+            "styles": ["libs/ui/.storybook/preview.css"],
+            "outputPath": "dist/storybook/ui",
+            "compodoc": false
+          }
+        }
+      }
+    }
+  }
+}

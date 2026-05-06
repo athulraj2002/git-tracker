@@ -27,6 +27,21 @@
     },
     "lint": {
       "executor": "@nx/eslint:lint"
+    },
+    "storybook": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "ng run ui:storybook",
+        "cwd": "."
+      }
+    },
+    "build-storybook": {
+      "executor": "nx:run-commands",
+      "outputs": ["{workspaceRoot}/dist/storybook/ui"],
+      "options": {
+        "command": "ng run ui:build-storybook",
+        "cwd": "."
+      }
     }
   }
 }

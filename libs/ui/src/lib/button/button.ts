@@ -1,16 +1,20 @@
 import { Component, input, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'danger'|'ghost'|'outline';
+export type ButtonVariant =
+  | 'primary'
+  | 'secondary'
+  | 'danger'
+  | 'ghost'
+  | 'outline';
 
 const variantClasses: Record<ButtonVariant, string> = {
-  primary:
-    'bg-black text-white hover:bg-black/90',
-  secondary:
-    'bg-gray-200 text-gray-900 hover:bg-gray-300 ',
+  primary: 'bg-black text-white hover:bg-black/90',
+  secondary: 'bg-gray-200 text-gray-900 hover:bg-gray-300 ',
   danger: 'bg-red-200 text-red-600 hover:bg-red-300 ',
-  ghost:'text-black dark:text-white hover hover:bg-gray-200 dark:hover:bg-gray-800',
-  outline:'border !border-gray-300 text-black dark:text-white hover:bg-gray-300 dark:hover:bg-gray-800'
+  ghost: 'text-black dark:text-white hover:bg-gray-200 dark:hover:bg-gray-800',
+  outline:
+    'border !border-gray-300 text-black dark:text-white hover:bg-gray-300 dark:hover:bg-gray-800',
 };
 
 @Component({
