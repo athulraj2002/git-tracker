@@ -1,0 +1,27 @@
+<div class="flex flex-col gap-1">
+  <label
+    [for]="id()"
+    class="flex items-start gap-2.5 cursor-pointer"
+    [class.opacity-50]="isDisabled()"
+    [class.cursor-not-allowed]="isDisabled()"
+  >
+    <input
+      type="checkbox"
+      [id]="id()"
+      [checked]="checked()"
+      [disabled]="isDisabled()"
+      (change)="toggle($event)"
+      class="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 accent-black
+             focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-black
+             disabled:cursor-not-allowed"
+    />
+    @if (label()) {
+      <span class="text-sm text-gray-700 dark:text-gray-300 select-none">{{ label() }}</span>
+    }
+  </label>
+  @if (errorMessage()) {
+    <span class="text-xs text-red-500 pl-6">{{ errorMessage() }}</span>
+  } @else if (hint()) {
+    <span class="text-xs text-gray-400 pl-6">{{ hint() }}</span>
+  }
+</div>
