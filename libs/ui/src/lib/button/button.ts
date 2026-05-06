@@ -1,5 +1,6 @@
 import { Component, input, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Spinner } from '../spinner/spinner';
 
 export type ButtonVariant =
   | 'primary'
@@ -18,8 +19,9 @@ const variantClasses: Record<ButtonVariant, string> = {
 };
 
 @Component({
+  standalone: true,
   selector: 'lib-ui-button',
-  imports: [CommonModule],
+  imports: [CommonModule, Spinner],
   templateUrl: './button.html',
 })
 
@@ -38,6 +40,7 @@ export class Button {
   variant = input<ButtonVariant>('primary');
   disabled = input<boolean>();
   type = input<'button' | 'submit' | 'reset'>('button');
+  isLoading = input<boolean>(false);
 
   classes = computed(() =>
     [

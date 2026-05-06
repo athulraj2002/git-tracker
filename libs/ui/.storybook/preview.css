@@ -1,7 +1,22 @@
 @import 'tailwindcss';
 
+/* Tell Tailwind v4 to use class-based dark mode instead of prefers-color-scheme */
+@variant dark (&:where(.dark, .dark *));
+
 @theme {
   --color-dark100: #2d2f33;
   --color-dark200: #1e1f22;
   --color-dark300: #17181a;
+}
+
+/* Light mode canvas background */
+body {
+  background-color: #f3f4f6;
+  color: #1f2937;
+}
+
+/* Dark mode canvas background */
+html.dark body {
+  background-color: #17181a;
+  color: #f3f4f6;
 }

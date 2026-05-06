@@ -1,14 +1,27 @@
 import type { Meta, StoryObj } from '@storybook/angular';
 import { Button, ButtonVariant } from './button';
 
-const meta: Meta<Button> = {
+const meta: Meta<Button & { label: string }> = {
   title: 'UI/Button',
   component: Button,
   tags: ['autodocs'],
   argTypes: {
+    label: {
+      control: 'text',
+      description: 'Button label text',
+      table: {
+        defaultValue: { summary: 'Button' },
+      },
+    },
     variant: {
       control: 'select',
-      options: ['primary', 'secondary', 'danger', 'ghost', 'outline'] satisfies ButtonVariant[],
+      options: [
+        'primary',
+        'secondary',
+        'danger',
+        'ghost',
+        'outline',
+      ] satisfies ButtonVariant[],
       description: 'Visual style of the button',
       table: {
         defaultValue: { summary: 'primary' },
@@ -17,6 +30,13 @@ const meta: Meta<Button> = {
     disabled: {
       control: 'boolean',
       description: 'Disables the button',
+      table: {
+        defaultValue: { summary: 'false' },
+      },
+    },
+    isLoading: {
+      control: 'boolean',
+      description: 'Shows a spinner inside the button',
       table: {
         defaultValue: { summary: 'false' },
       },
@@ -32,47 +52,75 @@ const meta: Meta<Button> = {
   },
   render: (args) => ({
     props: args,
-    template: `<lib-ui-button [variant]="variant" [disabled]="disabled" [type]="type">Button</lib-ui-button>`,
+    template: `<lib-ui-button [variant]="variant" [disabled]="disabled" [type]="type" [isLoading]="isLoading">{{ label }}</lib-ui-button>`,
   }),
 };
 
 export default meta;
-type Story = StoryObj<Button>;
+type Story = StoryObj<Button & { label: string }>;
 
 // ─── Individual variants ───────────────────────────────────────────────────
 
 export const Primary: Story = {
-  args: { variant: 'primary', disabled: false, type: 'button' },
+  args: {
+    label: 'Button',
+    variant: 'primary',
+    disabled: false,
+    isLoading: false,
+    type: 'button',
+  },
 };
 
 export const Secondary: Story = {
-  args: { variant: 'secondary', disabled: false, type: 'button' },
+  args: {
+    label: 'Button',
+    variant: 'secondary',
+    disabled: false,
+    isLoading: false,
+    type: 'button',
+  },
 };
 
 export const Danger: Story = {
-  args: { variant: 'danger', disabled: false, type: 'button' },
-  render: (args) => ({
-    props: args,
-    template: `<lib-ui-button [variant]="variant" [disabled]="disabled" [type]="type">Delete</lib-ui-button>`,
-  }),
+  args: {
+    label: 'Delete',
+    variant: 'danger',
+    disabled: false,
+    isLoading: false,
+    type: 'button',
+  },
 };
 
 export const Ghost: Story = {
-  args: { variant: 'ghost', disabled: false, type: 'button' },
+  args: {
+    label: 'Button',
+    variant: 'ghost',
+    disabled: false,
+    isLoading: false,
+    type: 'button',
+  },
 };
 
 export const Outline: Story = {
-  args: { variant: 'outline', disabled: false, type: 'button' },
+  args: {
+    label: 'Button',
+    variant: 'outline',
+    disabled: false,
+    isLoading: false,
+    type: 'button',
+  },
 };
 
 // ─── Disabled state ────────────────────────────────────────────────────────
 
 export const Disabled: Story = {
-  args: { variant: 'primary', disabled: true, type: 'button' },
-  render: (args) => ({
-    props: args,
-    template: `<lib-ui-button [variant]="variant" [disabled]="disabled" [type]="type">Disabled</lib-ui-button>`,
-  }),
+  args: {
+    label: 'Disabled',
+    variant: 'primary',
+    disabled: true,
+    isLoading: false,
+    type: 'button',
+  },
 };
 
 // ─── All variants showcase ─────────────────────────────────────────────────
@@ -101,6 +149,15 @@ export const AllVariants: Story = {
             <lib-ui-button variant="danger" [disabled]="true">Danger</lib-ui-button>
             <lib-ui-button variant="ghost" [disabled]="true">Ghost</lib-ui-button>
             <lib-ui-button variant="outline" [disabled]="true">Outline</lib-ui-button>
+          </div>
+        </div>
+
+        <div>
+          <p style="margin:0 0 10px; font-size:12px; color:#888; text-transform:uppercase; letter-spacing:.05em;">Loading</p>
+          <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center;">
+            <lib-ui-button variant="primary" [isLoading]="true" [disabled]="true">Saving</lib-ui-button>
+            <lib-ui-button variant="secondary" [isLoading]="true" [disabled]="true">Loading</lib-ui-button>
+            <lib-ui-button variant="danger" [isLoading]="true" [disabled]="true">Deleting</lib-ui-button>
           </div>
         </div>
 

@@ -1,3 +1,6 @@
 <button [type]="type()" [disabled]="disabled()" [class]="classes()">
   <ng-content></ng-content>
+  @if(isLoading()){
+  <lib-ui-spinner></lib-ui-spinner>
+  }
 </button>
