@@ -1,7 +1,31 @@
 import type { Meta, StoryObj } from '@storybook/angular';
 import { moduleMetadata } from '@storybook/angular';
-import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Component, signal } from '@angular/core';
+import { form, required, FormField } from '@angular/forms/signals';
 import { Checkbox } from './checkbox';
+
+@Component({
+  standalone: true,
+  selector: 'lib-demo-checkbox-signal-form',
+  imports: [FormField, Checkbox],
+  template: `
+    <div style="display:flex;flex-direction:column;gap:12px;max-width:320px;padding:24px;font-family:sans-serif;">
+      <lib-ui-checkbox
+        label="I agree to the terms and conditions"
+        [formField]="signupForm.acceptTerms"
+      ></lib-ui-checkbox>
+      <p style="font-size:12px;color:#888">
+        Checked: {{ signupForm().value().acceptTerms }} &nbsp;|&nbsp; Valid: {{ signupForm().valid() }}
+      </p>
+    </div>
+  `,
+})
+class DemoCheckboxSignalForm {
+  private readonly model = signal({ acceptTerms: false });
+  protected readonly signupForm = form(this.model, (p) => {
+    required(p.acceptTerms, { message: 'You must accept the terms to continue.' });
+  });
+}
 
 const meta: Meta<Checkbox> = {
   title: 'UI/Checkbox',
@@ -9,13 +33,17 @@ const meta: Meta<Checkbox> = {
   tags: ['autodocs'],
   decorators: [
     moduleMetadata({
-      imports: [ReactiveFormsModule],
+      imports: [FormField, DemoCheckboxSignalForm],
     }),
   ],
+  args: {
+    errors: [],
+  },
   argTypes: {
     label: { control: 'text' },
     hint: { control: 'text' },
-    errorMessage: { control: 'text' },
+    invalid: { control: 'boolean' },
+    touched: { control: 'boolean' },
   },
   render: (args) => ({
     props: args,
@@ -23,7 +51,9 @@ const meta: Meta<Checkbox> = {
       <lib-ui-checkbox
         [label]="label"
         [hint]="hint"
-        [errorMessage]="errorMessage"
+        [invalid]="invalid"
+        [touched]="touched"
+        [errors]="errors"
       ></lib-ui-checkbox>
     `,
   }),
@@ -36,7 +66,8 @@ export const Default: Story = {
   args: {
     label: 'I agree to the terms and conditions',
     hint: '',
-    errorMessage: '',
+    invalid: false,
+    touched: false,
   },
 };
 
@@ -44,7 +75,8 @@ export const WithHint: Story = {
   args: {
     label: 'Subscribe to newsletter',
     hint: 'You can unsubscribe at any time.',
-    errorMessage: '',
+    invalid: false,
+    touched: false,
   },
 };
 
@@ -52,36 +84,24 @@ export const WithError: Story = {
   args: {
     label: 'I agree to the terms and conditions',
     hint: '',
-    errorMessage: 'You must accept the terms to continue.',
+    invalid: true,
+    touched: true,
+    errors: [{ kind: 'required', message: 'You must accept the terms to continue.' }],
   },
 };
 
 export const Disabled: Story = {
   render: () => ({
     props: {},
-    template: `<lib-ui-checkbox label="This option is unavailable" [isDisabled]="true"></lib-ui-checkbox>`,
+    template: `<lib-ui-checkbox label="This option is unavailable" [disabled]="true"></lib-ui-checkbox>`,
   }),
 };
 
-export const WithReactiveForm: Story = {
-  render: () => {
-    const ctrl = new FormControl(false, Validators.requiredTrue);
-    return {
-      props: { ctrl },
-      template: `
-        <div style="display:flex;flex-direction:column;gap:12px;max-width:320px;padding:24px;font-family:sans-serif;">
-          <lib-ui-checkbox
-            label="I agree to the terms and conditions"
-            [formControl]="ctrl"
-            [errorMessage]="ctrl.invalid && ctrl.touched ? 'You must accept to continue.' : ''"
-          ></lib-ui-checkbox>
-          <p style="font-size:12px;color:#888">
-            Checked: {{ ctrl.value }} &nbsp;|&nbsp; Valid: {{ ctrl.valid }}
-          </p>
-        </div>
-      `,
-    };
-  },
+export const WithSignalForm: Story = {
+  render: () => ({
+    props: {},
+    template: `<lib-demo-checkbox-signal-form></lib-demo-checkbox-signal-form>`,
+  }),
 };
 
 export const SignupForm: Story = {

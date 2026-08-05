@@ -1,5 +1,5 @@
-import { Component, input, signal, computed, forwardRef } from '@angular/core';
-import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
+import { Component, input, model, computed } from '@angular/core';
+import type { FormValueControl, ValidationError } from '@angular/forms/signals';
 
 export interface RadioOption {
   value: string;
@@ -14,56 +14,37 @@ let radioGroupIdCounter = 0;
   standalone: true,
   selector: 'lib-ui-radio-group',
   templateUrl: './radio-group.html',
-  providers: [
-    {
-      provide: NG_VALUE_ACCESSOR,
-      useExisting: forwardRef(() => RadioGroup),
-      multi: true,
-    },
-  ],
 })
-export class RadioGroup implements ControlValueAccessor {
+export class RadioGroup implements FormValueControl<string> {
   private readonly _uid = `lib-ui-radio-${++radioGroupIdCounter}`;
 
   label = input<string>('');
   options = input<RadioOption[]>([]);
   name = input<string>(this._uid);
-  errorMessage = input<string>('');
   hint = input<string>('');
+  required = input<boolean>(false);
 
-  readonly selectedValue = signal<string>('');
-  readonly isDisabled = signal(false);
-
-  private onChange: (value: string) => void = () => {};
-  private onTouched: () => void = () => {};
+  readonly value = model<string>('');
+  readonly disabled = input<boolean>(false);
+  readonly invalid = input<boolean>(false);
+  readonly touched = model<boolean>(false);
+  readonly errors = input<readonly ValidationError.WithOptionalFieldTree[]>([]);
 
   readonly optionIds = computed(() =>
     this.options().map((_, i) => `${this.name()}-option-${i}`),
   );
 
-  isSelected(value: string): boolean {
-    return this.selectedValue() === value;
+  readonly displayError = computed(() => {
+    if (!this.touched() || !this.invalid()) return '';
+    return this.errors()[0]?.message ?? 'This field is invalid.';
+  });
+
+  isSelected(optionValue: string): boolean {
+    return this.value() === optionValue;
   }
 
-  writeValue(value: string): void {
-    this.selectedValue.set(value ?? '');
-  }
-
-  registerOnChange(fn: (value: string) => void): void {
-    this.onChange = fn;
-  }
-
-  registerOnTouched(fn: () => void): void {
-    this.onTouched = fn;
-  }
-
-  setDisabledState(isDisabled: boolean): void {
-    this.isDisabled.set(isDisabled);
-  }
-
-  select(value: string): void {
-    this.selectedValue.set(value);
-    this.onChange(value);
-    this.onTouched();
+  select(optionValue: string): void {
+    this.value.set(optionValue);
+    this.touched.set(true);
   }
 }

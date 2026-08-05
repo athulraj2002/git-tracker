@@ -1,9 +1,17 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "outDir": "../../../dist/out-tsc",
+    "outDir": "../../../dist/out-tsc/libs/shared/types",
+    "rootDir": "src",
+    "composite": true,
+    "tsBuildInfoFile": "../../../dist/out-tsc/libs/shared/types.tsbuildinfo",
     "declaration": true,
     "types": ["node"]
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts"],
+  "references": [
+    {
+      "path": "../zod-schemas/tsconfig.lib.json"
+    }
+  ]
 }

@@ -4,6 +4,7 @@
     "outDir": "dist",
     "types": ["node"],
     "rootDir": "src",
+    "composite": true,
     "tsBuildInfoFile": "dist/tsconfig.app.tsbuildinfo",
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,

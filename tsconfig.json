@@ -3,5 +3,12 @@
   "compileOnSave": false,
   "files": [],
   "include": [],
-  "references": []
+  "references": [
+    {
+      "path": "./apps/front-end"
+    },
+    {
+      "path": "./libs/ui"
+    }
+  ]
 }

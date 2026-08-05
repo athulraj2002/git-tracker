@@ -1,7 +1,10 @@
-<fieldset class="flex flex-col gap-1.5" [disabled]="isDisabled()">
+<fieldset class="flex flex-col gap-1.5" [disabled]="disabled()">
   @if (label()) {
     <legend class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
       {{ label() }}
+      @if (required()) {
+        <span class="text-red-500">*</span>
+      }
     </legend>
   }
 
@@ -10,8 +13,8 @@
       <label
         [for]="optionIds()[i]"
         class="flex items-start gap-2.5 cursor-pointer"
-        [class.opacity-50]="isDisabled() || option.disabled"
-        [class.cursor-not-allowed]="isDisabled() || option.disabled"
+        [class.opacity-50]="disabled() || option.disabled"
+        [class.cursor-not-allowed]="disabled() || option.disabled"
       >
         <input
           type="radio"
@@ -19,7 +22,7 @@
           [name]="name()"
           [value]="option.value"
           [checked]="isSelected(option.value)"
-          [disabled]="isDisabled() || option.disabled"
+          [disabled]="disabled() || option.disabled"
           (change)="select(option.value)"
           class="mt-0.5 h-4 w-4 shrink-0 accent-black border-gray-300
                  focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-black
@@ -35,8 +38,8 @@
     }
   </div>
 
-  @if (errorMessage()) {
-    <span class="text-xs text-red-500 mt-1">{{ errorMessage() }}</span>
+  @if (displayError()) {
+    <span class="text-xs text-red-500 mt-1">{{ displayError() }}</span>
   } @else if (hint()) {
     <span class="text-xs text-gray-400 mt-1">{{ hint() }}</span>
   }
