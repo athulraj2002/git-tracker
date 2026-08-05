@@ -2,6 +2,9 @@
   "extends": "../tsconfig.json",
   "compilerOptions": {
     "emitDecoratorMetadata": true,
+    "composite": true,
+    "outDir": "../../../dist/out-tsc/libs/ui/storybook",
+    "rootDir": "..",
     "types": ["node"]
   },
   "files": ["main.ts", "preview.ts"],

@@ -1,7 +1,37 @@
 import type { Meta, StoryObj } from '@storybook/angular';
 import { moduleMetadata } from '@storybook/angular';
-import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Component, signal } from '@angular/core';
+import { form, required, FormField } from '@angular/forms/signals';
 import { RadioGroup } from './radio-group';
+
+@Component({
+  standalone: true,
+  selector: 'lib-demo-radio-group-signal-form',
+  imports: [FormField, RadioGroup],
+  template: `
+    <div style="display:flex;flex-direction:column;gap:16px;max-width:360px;padding:24px;font-family:sans-serif;">
+      <lib-ui-radio-group
+        label="Team role"
+        [options]="options"
+        [formField]="teamForm.role"
+      ></lib-ui-radio-group>
+      <p style="font-size:12px;color:#888">
+        Value: {{ teamForm().value().role || '—' }} &nbsp;|&nbsp; Valid: {{ teamForm().valid() }}
+      </p>
+    </div>
+  `,
+})
+class DemoRadioGroupSignalForm {
+  protected readonly options = [
+    { value: 'viewer', label: 'Viewer', hint: 'Read-only access.' },
+    { value: 'editor', label: 'Editor', hint: 'Can create and edit content.' },
+    { value: 'admin', label: 'Admin', hint: 'Full access including settings.' },
+  ];
+  private readonly model = signal({ role: '' });
+  protected readonly teamForm = form(this.model, (p) => {
+    required(p.role, { message: 'Please select a role.' });
+  });
+}
 
 const meta: Meta<RadioGroup> = {
   title: 'UI/RadioGroup',
@@ -9,13 +39,17 @@ const meta: Meta<RadioGroup> = {
   tags: ['autodocs'],
   decorators: [
     moduleMetadata({
-      imports: [ReactiveFormsModule],
+      imports: [FormField, DemoRadioGroupSignalForm],
     }),
   ],
+  args: {
+    errors: [],
+  },
   argTypes: {
     label: { control: 'text' },
     hint: { control: 'text' },
-    errorMessage: { control: 'text' },
+    invalid: { control: 'boolean' },
+    touched: { control: 'boolean' },
   },
   render: (args) => ({
     props: args,
@@ -24,7 +58,9 @@ const meta: Meta<RadioGroup> = {
         [label]="label"
         [options]="options"
         [hint]="hint"
-        [errorMessage]="errorMessage"
+        [invalid]="invalid"
+        [touched]="touched"
+        [errors]="errors"
       ></lib-ui-radio-group>
     `,
   }),
@@ -42,7 +78,8 @@ export const Default: Story = {
       { value: 'slack', label: 'Slack' },
     ],
     hint: '',
-    errorMessage: '',
+    invalid: false,
+    touched: false,
   },
 };
 
@@ -55,7 +92,8 @@ export const WithHints: Story = {
       { value: 'enterprise', label: 'Enterprise', hint: 'Unlimited members, SSO and audit logs.' },
     ],
     hint: '',
-    errorMessage: '',
+    invalid: false,
+    touched: false,
   },
 };
 
@@ -68,7 +106,8 @@ export const WithDisabledOption: Story = {
       { value: 'enterprise', label: 'Enterprise', hint: 'Contact sales to enable.', disabled: true },
     ],
     hint: '',
-    errorMessage: '',
+    invalid: false,
+    touched: false,
   },
 };
 
@@ -81,37 +120,17 @@ export const WithError: Story = {
       { value: 'admin', label: 'Admin' },
     ],
     hint: '',
-    errorMessage: 'Please select a role to continue.',
+    invalid: true,
+    touched: true,
+    errors: [{ kind: 'required', message: 'Please select a role to continue.' }],
   },
 };
 
-export const WithReactiveForm: Story = {
-  render: () => {
-    const ctrl = new FormControl('', Validators.required);
-    return {
-      props: {
-        ctrl,
-        options: [
-          { value: 'viewer', label: 'Viewer', hint: 'Read-only access.' },
-          { value: 'editor', label: 'Editor', hint: 'Can create and edit content.' },
-          { value: 'admin', label: 'Admin', hint: 'Full access including settings.' },
-        ],
-      },
-      template: `
-        <div style="display:flex;flex-direction:column;gap:16px;max-width:360px;padding:24px;font-family:sans-serif;">
-          <lib-ui-radio-group
-            label="Team role"
-            [options]="options"
-            [formControl]="ctrl"
-            [errorMessage]="ctrl.invalid && ctrl.touched ? 'Please select a role.' : ''"
-          ></lib-ui-radio-group>
-          <p style="font-size:12px;color:#888">
-            Value: {{ ctrl.value || '—' }} &nbsp;|&nbsp; Valid: {{ ctrl.valid }}
-          </p>
-        </div>
-      `,
-    };
-  },
+export const WithSignalForm: Story = {
+  render: () => ({
+    props: {},
+    template: `<lib-demo-radio-group-signal-form></lib-demo-radio-group-signal-form>`,
+  }),
 };
 
 export const SignupForm: Story = {

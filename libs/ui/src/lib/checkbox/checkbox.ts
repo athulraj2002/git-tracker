@@ -1,5 +1,5 @@
-import { Component, input, signal, forwardRef } from '@angular/core';
-import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
+import { Component, input, model, computed } from '@angular/core';
+import type { FormCheckboxControl, ValidationError } from '@angular/forms/signals';
 
 let checkboxIdCounter = 0;
 
@@ -7,48 +7,27 @@ let checkboxIdCounter = 0;
   standalone: true,
   selector: 'lib-ui-checkbox',
   templateUrl: './checkbox.html',
-  providers: [
-    {
-      provide: NG_VALUE_ACCESSOR,
-      useExisting: forwardRef(() => Checkbox),
-      multi: true,
-    },
-  ],
 })
-export class Checkbox implements ControlValueAccessor {
+export class Checkbox implements FormCheckboxControl {
   private readonly _uid = `lib-ui-checkbox-${++checkboxIdCounter}`;
 
   label = input<string>('');
   hint = input<string>('');
-  errorMessage = input<string>('');
   id = input<string>(this._uid);
 
-  readonly checked = signal(false);
-  readonly isDisabled = signal(false);
+  readonly checked = model<boolean>(false);
+  readonly disabled = input<boolean>(false);
+  readonly invalid = input<boolean>(false);
+  readonly touched = model<boolean>(false);
+  readonly errors = input<readonly ValidationError.WithOptionalFieldTree[]>([]);
 
-  private onChange: (value: boolean) => void = () => {};
-  private onTouched: () => void = () => {};
-
-  writeValue(value: boolean): void {
-    this.checked.set(!!value);
-  }
-
-  registerOnChange(fn: (value: boolean) => void): void {
-    this.onChange = fn;
-  }
-
-  registerOnTouched(fn: () => void): void {
-    this.onTouched = fn;
-  }
-
-  setDisabledState(isDisabled: boolean): void {
-    this.isDisabled.set(isDisabled);
-  }
+  readonly displayError = computed(() => {
+    if (!this.touched() || !this.invalid()) return '';
+    return this.errors()[0]?.message ?? 'This field is invalid.';
+  });
 
   toggle(event: Event): void {
-    const checked = (event.target as HTMLInputElement).checked;
-    this.checked.set(checked);
-    this.onChange(checked);
-    this.onTouched();
+    this.checked.set((event.target as HTMLInputElement).checked);
+    this.touched.set(true);
   }
 }

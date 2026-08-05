@@ -5,20 +5,24 @@
       class="text-sm font-medium text-gray-700 dark:text-gray-300"
     >
       {{ label() }}
+      @if (required()) {
+        <span class="text-red-500">*</span>
+      }
     </label>
   }
   <input
     [id]="id()"
     [type]="type()"
     [placeholder]="placeholder()"
-    [disabled]="isDisabled()"
+    [disabled]="disabled()"
+    [required]="required()"
     [value]="value()"
     [class]="inputClasses()"
     (input)="onInput($event)"
     (blur)="onBlur()"
   />
-  @if (errorMessage()) {
-    <span class="text-xs text-red-500">{{ errorMessage() }}</span>
+  @if (displayError()) {
+    <span class="text-xs text-red-500">{{ displayError() }}</span>
   } @else if (hint()) {
     <span class="text-xs text-gray-400">{{ hint() }}</span>
   }
