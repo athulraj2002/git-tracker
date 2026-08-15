@@ -4,7 +4,11 @@ import { JwtModule } from '@nestjs/jwt';
 import type { SignOptions } from 'jsonwebtoken';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { BitbucketOAuthService } from './bitbucket-oauth.service';
+import { GithubOAuthService } from './github-oauth.service';
+import { GitlabOAuthService } from './gitlab-oauth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import { OAuthStateService } from './oauth-state.service';
 
 @Module({
   imports: [
@@ -23,7 +27,14 @@ import { JwtAuthGuard } from './jwt-auth.guard';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtAuthGuard],
+  providers: [
+    AuthService,
+    JwtAuthGuard,
+    OAuthStateService,
+    GithubOAuthService,
+    GitlabOAuthService,
+    BitbucketOAuthService,
+  ],
   exports: [JwtAuthGuard],
 })
 export class AuthModule {}

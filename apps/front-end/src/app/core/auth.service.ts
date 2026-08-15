@@ -2,13 +2,10 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
-import type {
-  AuthResponse,
-  AuthUser,
-  LoginRequest,
-  SignupRequest,
-} from '@org/types';
+import type { AuthUser } from '@org/types';
 import { TOKEN_STORAGE_KEY, USER_STORAGE_KEY } from './auth.storage';
+
+export type OAuthProvider = 'github' | 'gitlab' | 'bitbucket';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -23,18 +20,20 @@ export class AuthService {
   readonly user = this._user.asReadonly();
   readonly isAuthenticated = computed(() => this._accessToken() !== null);
 
-  async signup(payload: SignupRequest): Promise<void> {
+  async getOAuthAuthorizeUrl(provider: OAuthProvider): Promise<string> {
     const response = await firstValueFrom(
-      this.http.post<AuthResponse>('/api/auth/signup', payload),
+      this.http.get<{ url: string }>(`/api/auth/${provider}`),
     );
-    this.setSession(response);
+    return response.url;
   }
 
-  async login(payload: LoginRequest): Promise<void> {
-    const response = await firstValueFrom(
-      this.http.post<AuthResponse>('/api/auth/login', payload),
-    );
-    this.setSession(response);
+  async completeOAuthLogin(accessToken: string): Promise<void> {
+    this._accessToken.set(accessToken);
+    localStorage.setItem(TOKEN_STORAGE_KEY, accessToken);
+
+    const user = await firstValueFrom(this.http.get<AuthUser>('/api/auth/me'));
+    this._user.set(user);
+    localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
   }
 
   logout(): void {
@@ -43,13 +42,6 @@ export class AuthService {
     localStorage.removeItem(TOKEN_STORAGE_KEY);
     localStorage.removeItem(USER_STORAGE_KEY);
     this.router.navigateByUrl('/login');
-  }
-
-  private setSession(response: AuthResponse): void {
-    this._user.set(response.user);
-    this._accessToken.set(response.accessToken);
-    localStorage.setItem(TOKEN_STORAGE_KEY, response.accessToken);
-    localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(response.user));
   }
 
   private readStoredUser(): AuthUser | null {

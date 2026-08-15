@@ -1,50 +1,31 @@
 import { Component, inject, signal } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
-import { form, required, email, FormField } from '@angular/forms/signals';
-import { Button, InputField } from '@org/ui';
-import { AuthService } from '../../core/auth.service';
+import { Button } from '@org/ui';
+import { AuthService, type OAuthProvider } from '../../core/auth.service';
 import { extractErrorMessage } from '../../core/http-error';
 
 @Component({
   standalone: true,
   selector: 'app-login',
-  imports: [RouterLink, FormField, Button, InputField],
+  imports: [Button],
   templateUrl: './login.html',
 })
 export class Login {
   private readonly authService = inject(AuthService);
-  private readonly router = inject(Router);
 
-  protected readonly isSubmitting = signal(false);
   protected readonly errorMessage = signal('');
+  protected readonly loadingProvider = signal<OAuthProvider | null>(null);
 
-  private readonly model = signal({ email: '', password: '' });
-  protected readonly loginForm = form(this.model, (p) => {
-    required(p.email, { message: 'Email is required.' });
-    email(p.email, { message: 'Please enter a valid email.' });
-    required(p.password, { message: 'Password is required.' });
-  });
-
-  protected async onSubmit(event: Event): Promise<void> {
-    event.preventDefault();
+  protected async continueWith(provider: OAuthProvider): Promise<void> {
     this.errorMessage.set('');
-
-    this.loginForm.email().markAsTouched();
-    this.loginForm.password().markAsTouched();
-    if (!this.loginForm().valid()) {
-      return;
-    }
-
-    this.isSubmitting.set(true);
+    this.loadingProvider.set(provider);
     try {
-      await this.authService.login(this.model());
-      await this.router.navigateByUrl('/');
+      const url = await this.authService.getOAuthAuthorizeUrl(provider);
+      window.location.href = url;
     } catch (error) {
       this.errorMessage.set(
-        extractErrorMessage(error, 'Unable to sign in. Please try again.'),
+        extractErrorMessage(error, 'Unable to start sign-in.'),
       );
-    } finally {
-      this.isSubmitting.set(false);
+      this.loadingProvider.set(null);
     }
   }
 }

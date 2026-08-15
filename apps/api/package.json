@@ -103,7 +103,6 @@
     "@nestjs/platform-express": "^11.0.0",
     "@org/types": "0.0.1",
     "@org/zod-schemas": "0.0.1",
-    "bcryptjs": "^3.0.3",
     "drizzle-orm": "^0.45.2",
     "pg": "^8.23.0",
     "reflect-metadata": "^0.1.13",
