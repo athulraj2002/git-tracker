@@ -12,6 +12,7 @@ A web application that integrates with GitHub to analyze engineering productivit
 - Frontend: Angular
 - Backend: NestJS
 - Database: PostgreSQL
+- ORM: Drizzle
 - Cache: Redis
 - Queue: BullMQ
 - Validation + Types: **Zod (shared schemas)**

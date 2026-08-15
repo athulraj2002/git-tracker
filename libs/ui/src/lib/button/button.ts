@@ -3,14 +3,11 @@ import { CommonModule } from '@angular/common';
 import { Spinner } from '../spinner/spinner';
 
 export type ButtonVariant =
-  | 'primary'
-  | 'secondary'
-  | 'danger'
-  | 'ghost'
-  | 'outline';
+  'primary' | 'secondary' | 'danger' | 'ghost' | 'outline';
 
 const variantClasses: Record<ButtonVariant, string> = {
-  primary: 'bg-black text-white hover:bg-black/90',
+  primary:
+    'bg-black text-white hover:bg-black/80 dark:bg-white dark:text-black dark:hover:bg-white/80',
   secondary: 'bg-gray-200 text-gray-900 hover:bg-gray-300 ',
   danger: 'bg-red-200 text-red-600 hover:bg-red-300 ',
   ghost: 'text-black dark:text-white hover:bg-gray-200 dark:hover:bg-gray-800',
@@ -45,7 +42,7 @@ export class Button {
   classes = computed(() =>
     [
       'inline-flex items-center gap-2 justify-center border border-transparent',
-      'p-2.5 rounded-[10px] text-sm h-10  cursor-pointer',
+      'p-2.5 rounded-lg text-sm h-8  cursor-pointer',
       'transition-colors duration-200',
       'focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
       'disabled:opacity-50 disabled:cursor-not-allowed',

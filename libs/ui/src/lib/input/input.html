@@ -1,14 +1,13 @@
-<div class="flex flex-col gap-1.5">
+<div class="flex flex-col gap-1.5 relative">
   @if (label()) {
-    <label
-      [for]="id()"
-      class="text-sm font-medium text-gray-700 dark:text-gray-300"
-    >
-      {{ label() }}
-      @if (required()) {
-        <span class="text-red-500">*</span>
-      }
-    </label>
+  <label
+    [for]="id()"
+    class="text-sm font-medium text-gray-700 dark:text-gray-300"
+  >
+    {{ label() }} @if (required()) {
+    <span class="text-red-500">*</span>
+    }
+  </label>
   }
   <input
     [id]="id()"
@@ -22,8 +21,10 @@
     (blur)="onBlur()"
   />
   @if (displayError()) {
-    <span class="text-xs text-red-500">{{ displayError() }}</span>
+  <span class="text-xs text-red-500 absolute -bottom-5"
+    >{{ displayError() }}</span
+  >
   } @else if (hint()) {
-    <span class="text-xs text-gray-400">{{ hint() }}</span>
+  <span class="text-xs text-gray-400">{{ hint() }}</span>
   }
 </div>

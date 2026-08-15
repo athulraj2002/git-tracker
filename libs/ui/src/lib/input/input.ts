@@ -1,7 +1,8 @@
 import { Component, input, model, computed } from '@angular/core';
 import type { FormValueControl, ValidationError } from '@angular/forms/signals';
 
-export type InputType = 'text' | 'email' | 'password' | 'number' | 'tel' | 'url';
+export type InputType =
+  'text' | 'email' | 'password' | 'number' | 'tel' | 'url';
 
 let inputIdCounter = 0;
 
@@ -33,11 +34,11 @@ export class InputField implements FormValueControl<string> {
 
   readonly inputClasses = computed(() =>
     [
-      'w-full px-3 py-2 text-sm rounded-[10px] border',
+      'w-full px-3 py-1.5 text-sm rounded-lg border',
       'bg-white dark:bg-gray-900 text-gray-900 dark:text-white',
       'placeholder:text-gray-400',
       'transition-colors duration-200',
-      'focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-black dark:focus-visible:ring-white',
+      'focus:outline-none ',
       'disabled:opacity-50 disabled:cursor-not-allowed',
       this.displayError()
         ? 'border-red-500 focus-visible:ring-red-500'

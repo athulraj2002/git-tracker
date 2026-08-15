@@ -7,9 +7,10 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { eq } from 'drizzle-orm';
-import type { AuthResponse, LoginRequest, SignupRequest } from '@org/types';
+
 import { DRIZZLE, type DrizzleDb } from '../database/database.module';
 import { users, type User } from '../database/schema';
+import { SignupRequest, AuthResponse, LoginRequest } from '@org/types';
 
 const SALT_ROUNDS = 10;
 
@@ -25,9 +26,7 @@ export class AuthService {
       where: eq(users.email, dto.email),
     });
     if (existing) {
-      throw new ConflictException(
-        'An account with this email already exists.',
-      );
+      throw new ConflictException('An account with this email already exists.');
     }
 
     const passwordHash = await bcrypt.hash(dto.password, SALT_ROUNDS);

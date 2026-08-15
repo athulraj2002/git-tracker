@@ -1,7 +1,7 @@
 @import 'tailwindcss';
 
 /* Use class-based dark mode */
-@variant dark (&:where(.dark, .dark *));
+@custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
   --color-dark100: #2d2f33;
