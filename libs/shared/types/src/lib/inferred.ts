@@ -15,6 +15,10 @@ import type {
   AuthTokenSchema,
   AuthSessionSchema,
   OAuthCallbackQuerySchema,
+  SignupRequestSchema,
+  LoginRequestSchema,
+  AuthUserSchema,
+  AuthResponseSchema,
 } from '@org/zod-schemas';
 
 export type Metrics = z.infer<typeof MetricsSchema>;
@@ -34,3 +38,8 @@ export type GithubUser = z.infer<typeof GithubUserSchema>;
 export type AuthToken = z.infer<typeof AuthTokenSchema>;
 export type AuthSession = z.infer<typeof AuthSessionSchema>;
 export type OAuthCallbackQuery = z.infer<typeof OAuthCallbackQuerySchema>;
+
+export type SignupRequest = z.infer<typeof SignupRequestSchema>;
+export type LoginRequest = z.infer<typeof LoginRequestSchema>;
+export type AuthUser = z.infer<typeof AuthUserSchema>;
+export type AuthResponse = z.infer<typeof AuthResponseSchema>;

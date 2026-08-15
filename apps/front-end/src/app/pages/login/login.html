@@ -1,0 +1,52 @@
+<div class="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950 px-4">
+  <form
+    novalidate
+    (submit)="onSubmit($event)"
+    class="w-full max-w-sm flex flex-col gap-5 p-8 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900"
+  >
+    <div>
+      <h1 class="text-xl font-semibold text-gray-900 dark:text-white">
+        Sign in
+      </h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400">
+        Welcome back to Git Tracker.
+      </p>
+    </div>
+
+    @if (errorMessage()) {
+      <p class="text-sm text-red-500">{{ errorMessage() }}</p>
+    }
+
+    <lib-ui-input
+      label="Email"
+      type="email"
+      placeholder="you@example.com"
+      [formField]="loginForm.email"
+    ></lib-ui-input>
+
+    <lib-ui-input
+      label="Password"
+      type="password"
+      placeholder="••••••••"
+      [formField]="loginForm.password"
+    ></lib-ui-input>
+
+    <lib-ui-button
+      type="submit"
+      variant="primary"
+      [isLoading]="isSubmitting()"
+      [disabled]="isSubmitting()"
+    >
+      Sign in
+    </lib-ui-button>
+
+    <p class="text-sm text-center text-gray-500 dark:text-gray-400">
+      Don't have an account?
+      <a
+        routerLink="/signup"
+        class="text-black dark:text-white font-medium hover:underline"
+        >Sign up</a
+      >
+    </p>
+  </form>
+</div>

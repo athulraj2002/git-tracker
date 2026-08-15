@@ -74,13 +74,38 @@
             "buildTarget": "@org/api:build:production"
           }
         }
+      },
+      "db-generate": {
+        "executor": "nx:run-commands",
+        "options": {
+          "command": "drizzle-kit generate --config=drizzle.config.ts"
+        }
+      },
+      "db-migrate": {
+        "executor": "nx:run-commands",
+        "options": {
+          "command": "drizzle-kit migrate --config=drizzle.config.ts"
+        }
+      },
+      "db-push": {
+        "executor": "nx:run-commands",
+        "options": {
+          "command": "drizzle-kit push --config=drizzle.config.ts"
+        }
       }
     }
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
+    "@nestjs/config": "^4.0.4",
     "@nestjs/core": "^11.0.0",
+    "@nestjs/jwt": "^11.0.2",
     "@nestjs/platform-express": "^11.0.0",
+    "@org/types": "0.0.1",
+    "@org/zod-schemas": "0.0.1",
+    "bcryptjs": "^3.0.3",
+    "drizzle-orm": "^0.45.2",
+    "pg": "^8.23.0",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.0",
     "tslib": "^2.3.0"
