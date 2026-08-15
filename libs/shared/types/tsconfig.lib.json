@@ -1,10 +1,9 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "outDir": "../../../dist/out-tsc/libs/shared/types",
+    "outDir": "../../../dist/out-tsc/libs/shared/types/lib",
     "rootDir": "src",
     "composite": true,
-    "tsBuildInfoFile": "../../../dist/out-tsc/libs/shared/types.tsbuildinfo",
     "declaration": true,
     "types": ["node"]
   },

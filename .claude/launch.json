@@ -6,6 +6,12 @@
       "runtimeExecutable": "npx",
       "runtimeArgs": ["nx", "run", "ui:storybook"],
       "port": 4400
+    },
+    {
+      "name": "front-end",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["nx", "run", "front-end:serve"],
+      "port": 4200
     }
   ]
 }
