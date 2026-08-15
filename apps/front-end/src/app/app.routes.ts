@@ -6,9 +6,12 @@ export const appRoutes: Route[] = [
     path: 'login',
     loadComponent: () => import('./pages/login/login').then((m) => m.Login),
   },
+  { path: 'signup', redirectTo: 'login' },
   {
-    path: 'signup',
+    path: 'auth/callback',
     loadComponent: () =>
-      import('./pages/signup/signup').then((m) => m.Signup),
+      import('./pages/auth-callback/auth-callback').then(
+        (m) => m.AuthCallback,
+      ),
   },
 ];

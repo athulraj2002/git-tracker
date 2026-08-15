@@ -1,18 +1,13 @@
-import {
-  ConflictException,
-  Inject,
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcryptjs';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 
 import { DRIZZLE, type DrizzleDb } from '../database/database.module';
-import { users, type User } from '../database/schema';
-import { SignupRequest, AuthResponse, LoginRequest } from '@org/types';
+import { users, userIdentities, type User } from '../database/schema';
+import { AuthResponse } from '@org/types';
+import type { OAuthProfile } from './oauth-profile';
 
-const SALT_ROUNDS = 10;
+export type AuthProvider = 'github' | 'gitlab' | 'bitbucket';
 
 @Injectable()
 export class AuthService {
@@ -21,32 +16,59 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
-  async signup(dto: SignupRequest): Promise<AuthResponse> {
-    const existing = await this.db.query.users.findFirst({
-      where: eq(users.email, dto.email),
+  async loginWithProvider(
+    provider: AuthProvider,
+    profile: OAuthProfile,
+  ): Promise<AuthResponse> {
+    const identity = await this.db.query.userIdentities.findFirst({
+      where: and(
+        eq(userIdentities.provider, provider),
+        eq(userIdentities.providerUserId, profile.providerUserId),
+      ),
     });
-    if (existing) {
-      throw new ConflictException('An account with this email already exists.');
+
+    let userId: string;
+    if (identity) {
+      userId = identity.userId;
+      await this.db
+        .update(users)
+        .set({ avatarUrl: profile.avatarUrl, updatedAt: new Date() })
+        .where(eq(users.id, userId));
+    } else {
+      const existingByEmail = await this.db.query.users.findFirst({
+        where: eq(users.email, profile.email),
+      });
+
+      if (existingByEmail) {
+        userId = existingByEmail.id;
+        await this.db
+          .update(users)
+          .set({ avatarUrl: profile.avatarUrl, updatedAt: new Date() })
+          .where(eq(users.id, userId));
+      } else {
+        const [created] = await this.db
+          .insert(users)
+          .values({
+            name: profile.name,
+            email: profile.email,
+            avatarUrl: profile.avatarUrl,
+          })
+          .returning();
+        userId = created.id;
+      }
+
+      await this.db.insert(userIdentities).values({
+        userId,
+        provider,
+        providerUserId: profile.providerUserId,
+        providerLogin: profile.providerLogin,
+      });
     }
 
-    const passwordHash = await bcrypt.hash(dto.password, SALT_ROUNDS);
-    const [user] = await this.db
-      .insert(users)
-      .values({ name: dto.name, email: dto.email, passwordHash })
-      .returning();
-
-    return this.buildAuthResponse(user);
-  }
-
-  async login(dto: LoginRequest): Promise<AuthResponse> {
     const user = await this.db.query.users.findFirst({
-      where: eq(users.email, dto.email),
+      where: eq(users.id, userId),
     });
-    if (!user || !(await bcrypt.compare(dto.password, user.passwordHash))) {
-      throw new UnauthorizedException('Invalid email or password.');
-    }
-
-    return this.buildAuthResponse(user);
+    return this.buildAuthResponse(user as User);
   }
 
   findById(id: string): Promise<User | undefined> {

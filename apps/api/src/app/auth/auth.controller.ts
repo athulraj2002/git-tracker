@@ -1,40 +1,112 @@
 import {
-  Body,
+  BadRequestException,
   Controller,
   Get,
-  HttpCode,
-  HttpStatus,
   NotFoundException,
-  Post,
+  Query,
+  Res,
   UseGuards,
-  UsePipes,
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
-import { LoginRequestSchema, SignupRequestSchema } from '@org/zod-schemas';
-import type { AuthResponse, LoginRequest, SignupRequest } from '@org/types';
+import type { FastifyReply } from 'fastify';
+import { OAuthCallbackQuerySchema } from '@org/zod-schemas';
+import type { OAuthCallbackQuery } from '@org/types';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
 import { AuthService } from './auth.service';
+import { BitbucketOAuthService } from './bitbucket-oauth.service';
 import { CurrentUser } from './current-user.decorator';
+import { GithubOAuthService } from './github-oauth.service';
+import { GitlabOAuthService } from './gitlab-oauth.service';
 import { JwtAuthGuard, type AuthenticatedUser } from './jwt-auth.guard';
 
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly githubOAuthService: GithubOAuthService,
+    private readonly gitlabOAuthService: GitlabOAuthService,
+    private readonly bitbucketOAuthService: BitbucketOAuthService,
+  ) {}
 
-  @Post('signup')
-  @UsePipes(new ZodValidationPipe(SignupRequestSchema))
-  @ApiOperation({ summary: 'Create a new account' })
-  signup(@Body() dto: SignupRequest): Promise<AuthResponse> {
-    return this.authService.signup(dto);
+  @Get('github')
+  @ApiOperation({ summary: 'Start GitHub sign-in/sign-up' })
+  async githubAuthorize(): Promise<{ url: string }> {
+    return { url: await this.githubOAuthService.buildAuthorizeUrl() };
   }
 
-  @Post('login')
-  @HttpCode(HttpStatus.OK)
-  @UsePipes(new ZodValidationPipe(LoginRequestSchema))
-  @ApiOperation({ summary: 'Sign in with email and password' })
-  login(@Body() dto: LoginRequest): Promise<AuthResponse> {
-    return this.authService.login(dto);
+  @Get('github/callback')
+  @ApiOperation({ summary: 'Handle the GitHub OAuth redirect' })
+  async githubCallback(
+    @Query(new ZodValidationPipe(OAuthCallbackQuerySchema))
+    query: OAuthCallbackQuery,
+    @Res() res: FastifyReply,
+  ): Promise<void> {
+    if (!query.state) {
+      throw new BadRequestException('Missing GitHub OAuth state.');
+    }
+
+    await this.githubOAuthService.verifyState(query.state);
+    const profile = await this.githubOAuthService.fetchProfile(query.code);
+    const { accessToken } = await this.authService.loginWithProvider(
+      'github',
+      profile,
+    );
+    res.redirect(this.githubOAuthService.buildFrontendRedirectUrl(accessToken));
+  }
+
+  @Get('gitlab')
+  @ApiOperation({ summary: 'Start GitLab sign-in/sign-up' })
+  async gitlabAuthorize(): Promise<{ url: string }> {
+    return { url: await this.gitlabOAuthService.buildAuthorizeUrl() };
+  }
+
+  @Get('gitlab/callback')
+  @ApiOperation({ summary: 'Handle the GitLab OAuth redirect' })
+  async gitlabCallback(
+    @Query(new ZodValidationPipe(OAuthCallbackQuerySchema))
+    query: OAuthCallbackQuery,
+    @Res() res: FastifyReply,
+  ): Promise<void> {
+    if (!query.state) {
+      throw new BadRequestException('Missing GitLab OAuth state.');
+    }
+
+    await this.gitlabOAuthService.verifyState(query.state);
+    const profile = await this.gitlabOAuthService.fetchProfile(query.code);
+    const { accessToken } = await this.authService.loginWithProvider(
+      'gitlab',
+      profile,
+    );
+    res.redirect(this.gitlabOAuthService.buildFrontendRedirectUrl(accessToken));
+  }
+
+  @Get('bitbucket')
+  @ApiOperation({ summary: 'Start Bitbucket sign-in/sign-up' })
+  async bitbucketAuthorize(): Promise<{ url: string }> {
+    return { url: await this.bitbucketOAuthService.buildAuthorizeUrl() };
+  }
+
+  @Get('bitbucket/callback')
+  @ApiOperation({ summary: 'Handle the Bitbucket OAuth redirect' })
+  async bitbucketCallback(
+    @Query(new ZodValidationPipe(OAuthCallbackQuerySchema))
+    query: OAuthCallbackQuery,
+    @Res() res: FastifyReply,
+  ): Promise<void> {
+    if (!query.state) {
+      throw new BadRequestException('Missing Bitbucket OAuth state.');
+    }
+
+    await this.bitbucketOAuthService.verifyState(query.state);
+    const profile = await this.bitbucketOAuthService.fetchProfile(query.code);
+    const { accessToken } = await this.authService.loginWithProvider(
+      'bitbucket',
+      profile,
+    );
+    res.redirect(
+      this.bitbucketOAuthService.buildFrontendRedirectUrl(accessToken),
+    );
   }
 
   @Get('me')

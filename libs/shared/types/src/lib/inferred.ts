@@ -12,11 +12,11 @@ import type {
   GithubWebhookPayloadSchema,
   FetchReposResponseSchema,
   GithubUserSchema,
+  GitlabUserSchema,
+  BitbucketUserSchema,
   AuthTokenSchema,
   AuthSessionSchema,
   OAuthCallbackQuerySchema,
-  SignupRequestSchema,
-  LoginRequestSchema,
   AuthUserSchema,
   AuthResponseSchema,
 } from '@org/zod-schemas';
@@ -35,11 +35,11 @@ export type GithubWebhookPayload = z.infer<typeof GithubWebhookPayloadSchema>;
 export type FetchReposResponse = z.infer<typeof FetchReposResponseSchema>;
 
 export type GithubUser = z.infer<typeof GithubUserSchema>;
+export type GitlabUser = z.infer<typeof GitlabUserSchema>;
+export type BitbucketUser = z.infer<typeof BitbucketUserSchema>;
 export type AuthToken = z.infer<typeof AuthTokenSchema>;
 export type AuthSession = z.infer<typeof AuthSessionSchema>;
 export type OAuthCallbackQuery = z.infer<typeof OAuthCallbackQuerySchema>;
 
-export type SignupRequest = z.infer<typeof SignupRequestSchema>;
-export type LoginRequest = z.infer<typeof LoginRequestSchema>;
 export type AuthUser = z.infer<typeof AuthUserSchema>;
 export type AuthResponse = z.infer<typeof AuthResponseSchema>;
