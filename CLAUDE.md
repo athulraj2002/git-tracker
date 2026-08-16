@@ -21,3 +21,12 @@
 - The `nx-generate` skill handles generator discovery internally - don't call nx_docs just to look up generator syntax
 
 <!-- nx configuration end-->
+
+# Angular / TypeScript Best Practices
+
+Before writing or reviewing Angular/TypeScript code in `apps/front-end` or `libs/ui`, read [best-practices.md](best-practices.md) in the repo root and follow it.
+
+# Git Workflow
+
+Before committing, read [CONTRIBUTING.md](CONTRIBUTING.md) for the required commit message format and the git hooks (husky) enforcing it - no `console.log` in staged files, and commit messages must be `Type: subject` plus a detailed body.
+
