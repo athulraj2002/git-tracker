@@ -52,7 +52,10 @@ export class AuthController {
       'github',
       profile,
     );
-    res.redirect(this.githubOAuthService.buildFrontendRedirectUrl(accessToken));
+    res.redirect(
+      this.githubOAuthService.buildFrontendRedirectUrl(accessToken),
+      302,
+    );
   }
 
   @Get('gitlab')
@@ -78,7 +81,10 @@ export class AuthController {
       'gitlab',
       profile,
     );
-    res.redirect(this.gitlabOAuthService.buildFrontendRedirectUrl(accessToken));
+    res.redirect(
+      this.gitlabOAuthService.buildFrontendRedirectUrl(accessToken),
+      302,
+    );
   }
 
   @Get('bitbucket')
@@ -106,6 +112,7 @@ export class AuthController {
     );
     res.redirect(
       this.bitbucketOAuthService.buildFrontendRedirectUrl(accessToken),
+      302,
     );
   }
 
