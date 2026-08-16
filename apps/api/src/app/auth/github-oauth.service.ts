@@ -28,7 +28,9 @@ export class GithubOAuthService {
     const params = new URLSearchParams({
       client_id: this.config.getOrThrow<string>('GITHUB_CLIENT_ID'),
       redirect_uri: this.config.getOrThrow<string>('GITHUB_OAUTH_CALLBACK_URL'),
-      scope: 'read:user user:email',
+      // repo is required to list and read private repositories for tracking;
+      // this does mean sign-in now also asks for repo access up front.
+      scope: 'read:user user:email repo',
       state,
       allow_signup: 'true',
     });
@@ -55,6 +57,7 @@ export class GithubOAuthService {
       name: user.name ?? user.login,
       email,
       avatarUrl: user.avatarUrl,
+      accessToken,
     };
   }
 

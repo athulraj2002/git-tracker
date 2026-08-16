@@ -53,6 +53,7 @@ export class BitbucketOAuthService {
       name: user.displayName || user.username,
       email,
       avatarUrl: user.avatarUrl,
+      accessToken,
     };
   }
 

@@ -47,6 +47,7 @@ export class GitlabOAuthService {
       name: user.name,
       email: user.email,
       avatarUrl: user.avatarUrl ?? '',
+      accessToken,
     };
   }
 

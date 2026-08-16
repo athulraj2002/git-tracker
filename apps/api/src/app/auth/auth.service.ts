@@ -34,6 +34,10 @@ export class AuthService {
         .update(users)
         .set({ avatarUrl: profile.avatarUrl, updatedAt: new Date() })
         .where(eq(users.id, userId));
+      await this.db
+        .update(userIdentities)
+        .set({ accessToken: profile.accessToken })
+        .where(eq(userIdentities.id, identity.id));
     } else {
       const existingByEmail = await this.db.query.users.findFirst({
         where: eq(users.email, profile.email),
@@ -62,6 +66,7 @@ export class AuthService {
         provider,
         providerUserId: profile.providerUserId,
         providerLogin: profile.providerLogin,
+        accessToken: profile.accessToken,
       });
     }
 

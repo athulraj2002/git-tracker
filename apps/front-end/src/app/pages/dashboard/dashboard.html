@@ -1,0 +1,60 @@
+<div class="min-h-screen bg-gray-50 dark:bg-gray-950 px-6 py-10">
+  <div class="max-w-3xl mx-auto flex flex-col gap-6">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-xl font-semibold text-gray-900 dark:text-white">
+          Welcome{{ authService.user()?.name ? ', ' + authService.user()?.name : '' }}
+        </h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400">
+          Tracking {{ repos().length }}
+          repositor{{ repos().length === 1 ? 'y' : 'ies' }}.
+        </p>
+      </div>
+      <lib-ui-button type="button" variant="outline" (click)="logout()">
+        Sign out
+      </lib-ui-button>
+    </div>
+
+    @if (errorMessage()) {
+      <p class="text-sm text-red-500">{{ errorMessage() }}</p>
+    }
+
+    @if (isLoading()) {
+      <p class="text-sm text-gray-500 dark:text-gray-400">Loading…</p>
+    } @else {
+      <div
+        class="flex flex-col rounded-lg border border-gray-200 dark:border-gray-800"
+      >
+        @for (repo of repos(); track repo.id) {
+          <a
+            [href]="repo.htmlUrl"
+            target="_blank"
+            rel="noopener"
+            class="flex items-center gap-3 px-4 py-3 border-b border-gray-200 dark:border-gray-800 last:border-b-0 hover:bg-gray-100 dark:hover:bg-gray-900"
+          >
+            <span class="flex-1 text-sm text-gray-900 dark:text-white">{{
+              repo.fullName
+            }}</span>
+            @if (repo.private) {
+              <span
+                class="text-xs text-gray-400 border border-gray-300 dark:border-gray-700 rounded px-1.5 py-0.5"
+                >Private</span
+              >
+            }
+          </a>
+        } @empty {
+          <p class="px-4 py-6 text-sm text-gray-500 dark:text-gray-400 text-center">
+            No repositories tracked yet.
+          </p>
+        }
+      </div>
+
+      <a
+        routerLink="/select-repos"
+        class="text-sm text-black dark:text-white font-medium hover:underline self-start"
+      >
+        Manage tracked repositories
+      </a>
+    }
+  </div>
+</div>

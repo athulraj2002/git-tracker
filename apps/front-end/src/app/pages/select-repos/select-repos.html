@@ -1,0 +1,63 @@
+<div
+  class="min-h-screen bg-gray-50 dark:bg-gray-950 px-4 py-10 flex flex-col items-center"
+>
+  <div class="w-full max-w-lg flex flex-col gap-6">
+    <div>
+      <h1 class="text-xl font-semibold text-gray-900 dark:text-white">
+        Choose repositories to track
+      </h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400">
+        Select the GitHub repositories you want Git Tracker to analyze. You
+        can change this later.
+      </p>
+    </div>
+
+    @if (errorMessage()) {
+      <p class="text-sm text-red-500">{{ errorMessage() }}</p>
+    }
+
+    @if (isLoading()) {
+      <p class="text-sm text-gray-500 dark:text-gray-400">
+        Loading your repositories…
+      </p>
+    } @else {
+      <div
+        class="flex flex-col max-h-96 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-800"
+      >
+        @for (repo of repos(); track repo.id) {
+          <div
+            class="flex items-center gap-3 px-4 py-3 border-b border-gray-200 dark:border-gray-800 last:border-b-0"
+          >
+            <lib-ui-checkbox
+              class="flex-1"
+              [label]="repo.fullName"
+              [checked]="selectedIds().has(repo.id)"
+              (checkedChange)="setSelected(repo.id, $event)"
+            ></lib-ui-checkbox>
+            @if (repo.private) {
+              <span
+                class="text-xs text-gray-400 border border-gray-300 dark:border-gray-700 rounded px-1.5 py-0.5"
+                >Private</span
+              >
+            }
+          </div>
+        } @empty {
+          <p class="px-4 py-6 text-sm text-gray-500 dark:text-gray-400 text-center">
+            No repositories found on your GitHub account.
+          </p>
+        }
+      </div>
+
+      <lib-ui-button
+        type="button"
+        variant="primary"
+        [isLoading]="isSaving()"
+        [disabled]="isSaving() || selectedIds().size === 0"
+        (click)="continue()"
+      >
+        Continue with {{ selectedIds().size }}
+        repositor{{ selectedIds().size === 1 ? 'y' : 'ies' }}
+      </lib-ui-button>
+    }
+  </div>
+</div>
