@@ -5,7 +5,6 @@ import { form, required, email, FormField } from '@angular/forms/signals';
 import { InputField, InputType } from './input';
 
 @Component({
-  standalone: true,
   selector: 'lib-demo-input-signal-form',
   imports: [FormField, InputField],
   template: `
@@ -32,7 +31,6 @@ class DemoInputSignalForm {
 }
 
 @Component({
-  standalone: true,
   selector: 'lib-demo-input-login-form',
   imports: [FormField, InputField],
   template: `

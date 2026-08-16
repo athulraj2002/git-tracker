@@ -4,7 +4,6 @@ import { AuthService, type OAuthProvider } from '../../core/auth.service';
 import { extractErrorMessage } from '../../core/http-error';
 
 @Component({
-  standalone: true,
   selector: 'app-login',
   imports: [Button],
   templateUrl: './login.html',

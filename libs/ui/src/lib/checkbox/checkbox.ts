@@ -4,7 +4,6 @@ import type { FormCheckboxControl, ValidationError } from '@angular/forms/signal
 let checkboxIdCounter = 0;
 
 @Component({
-  standalone: true,
   selector: 'lib-ui-checkbox',
   templateUrl: './checkbox.html',
 })

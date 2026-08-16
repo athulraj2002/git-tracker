@@ -7,7 +7,6 @@ export type InputType =
 let inputIdCounter = 0;
 
 @Component({
-  standalone: true,
   selector: 'lib-ui-input',
   templateUrl: './input.html',
 })

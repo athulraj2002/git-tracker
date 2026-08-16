@@ -5,7 +5,6 @@ import { form, required, FormField } from '@angular/forms/signals';
 import { Checkbox } from './checkbox';
 
 @Component({
-  standalone: true,
   selector: 'lib-demo-checkbox-signal-form',
   imports: [FormField, Checkbox],
   template: `

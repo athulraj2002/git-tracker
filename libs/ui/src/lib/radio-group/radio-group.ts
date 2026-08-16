@@ -11,7 +11,6 @@ export interface RadioOption {
 let radioGroupIdCounter = 0;
 
 @Component({
-  standalone: true,
   selector: 'lib-ui-radio-group',
   templateUrl: './radio-group.html',
 })

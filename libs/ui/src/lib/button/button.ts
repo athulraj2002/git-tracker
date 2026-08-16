@@ -16,7 +16,6 @@ const variantClasses: Record<ButtonVariant, string> = {
 };
 
 @Component({
-  standalone: true,
   selector: 'lib-ui-button',
   imports: [CommonModule, Spinner],
   templateUrl: './button.html',

@@ -5,7 +5,6 @@ import { form, required, FormField } from '@angular/forms/signals';
 import { RadioGroup } from './radio-group';
 
 @Component({
-  standalone: true,
   selector: 'lib-demo-radio-group-signal-form',
   imports: [FormField, RadioGroup],
   template: `

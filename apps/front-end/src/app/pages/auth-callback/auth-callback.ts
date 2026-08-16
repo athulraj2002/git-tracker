@@ -4,7 +4,6 @@ import { AuthService } from '../../core/auth.service';
 import { extractErrorMessage } from '../../core/http-error';
 
 @Component({
-  standalone: true,
   selector: 'app-auth-callback',
   imports: [RouterLink],
   templateUrl: './auth-callback.html',
