@@ -10,6 +10,9 @@ export const GithubRepoSchema = z.object({
   description: z.string().nullable(),
   htmlUrl: z.string().url(),
   cloneUrl: z.string().url(),
+  stars: z.number().int().min(0),
+  forks: z.number().int().min(0),
+  openIssues: z.number().int().min(0),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });

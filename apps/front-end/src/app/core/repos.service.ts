@@ -1,7 +1,12 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import type { GithubRepo, SelectedRepo, TrackedRepo } from '@org/types';
+import type {
+  GithubRepo,
+  RepoDetailResponse,
+  SelectedRepo,
+  TrackedRepo,
+} from '@org/types';
 
 @Injectable({ providedIn: 'root' })
 export class ReposService {
@@ -13,6 +18,12 @@ export class ReposService {
 
   getTrackedRepos(): Promise<TrackedRepo[]> {
     return firstValueFrom(this.http.get<TrackedRepo[]>('/api/repos/tracked'));
+  }
+
+  getRepoDetail(id: string): Promise<RepoDetailResponse> {
+    return firstValueFrom(
+      this.http.get<RepoDetailResponse>(`/api/repos/tracked/${id}`),
+    );
   }
 
   setTrackedRepos(repos: SelectedRepo[]): Promise<TrackedRepo[]> {

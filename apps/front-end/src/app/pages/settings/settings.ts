@@ -1,32 +1,37 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
 import { Button, Checkbox } from '@org/ui';
-import type { GithubRepo } from '@org/types';
+import type { ConnectedIdentity, GithubRepo } from '@org/types';
+import { AuthService } from '../../core/auth.service';
 import { ReposService } from '../../core/repos.service';
 import { extractErrorMessage } from '../../core/http-error';
 
 @Component({
-  selector: 'app-select-repos',
+  selector: 'app-settings',
   imports: [Button, Checkbox],
-  templateUrl: './select-repos.html',
+  templateUrl: './settings.html',
 })
-export class SelectRepos implements OnInit {
+export class Settings implements OnInit {
+  protected readonly authService = inject(AuthService);
   private readonly reposService = inject(ReposService);
-  private readonly router = inject(Router);
 
-  protected readonly repos = signal<GithubRepo[]>([]);
+  protected readonly identities = signal<ConnectedIdentity[]>([]);
+
+  protected readonly availableRepos = signal<GithubRepo[]>([]);
   protected readonly selectedIds = signal<Set<number>>(new Set());
   protected readonly isLoading = signal(true);
   protected readonly isSaving = signal(false);
   protected readonly errorMessage = signal('');
+  protected readonly savedMessage = signal('');
 
   async ngOnInit(): Promise<void> {
     try {
-      const [available, tracked] = await Promise.all([
+      const [identities, available, tracked] = await Promise.all([
+        this.authService.getIdentities(),
         this.reposService.getAvailableRepos(),
         this.reposService.getTrackedRepos(),
       ]);
-      this.repos.set(available);
+      this.identities.set(identities);
+      this.availableRepos.set(available);
       this.selectedIds.set(
         new Set(
           tracked
@@ -36,7 +41,7 @@ export class SelectRepos implements OnInit {
       );
     } catch (error) {
       this.errorMessage.set(
-        extractErrorMessage(error, 'Unable to load your GitHub repositories.'),
+        extractErrorMessage(error, 'Unable to load your settings.'),
       );
     } finally {
       this.isLoading.set(false);
@@ -44,6 +49,7 @@ export class SelectRepos implements OnInit {
   }
 
   protected setSelected(repoId: number, checked: boolean): void {
+    this.savedMessage.set('');
     const next = new Set(this.selectedIds());
     if (checked) {
       next.add(repoId);
@@ -53,11 +59,12 @@ export class SelectRepos implements OnInit {
     this.selectedIds.set(next);
   }
 
-  protected async continue(): Promise<void> {
+  protected async saveRepos(): Promise<void> {
     this.errorMessage.set('');
+    this.savedMessage.set('');
     this.isSaving.set(true);
     try {
-      const selected = this.repos().filter((repo) =>
+      const selected = this.availableRepos().filter((repo) =>
         this.selectedIds().has(repo.id),
       );
       await this.reposService.setTrackedRepos(
@@ -74,7 +81,7 @@ export class SelectRepos implements OnInit {
           openIssues: repo.openIssues,
         })),
       );
-      await this.router.navigateByUrl('/dashboard');
+      this.savedMessage.set('Your tracked repositories have been updated.');
     } catch (error) {
       this.errorMessage.set(
         extractErrorMessage(error, 'Unable to save your selected repositories.'),

@@ -1,60 +1,152 @@
-<div class="min-h-screen bg-gray-50 dark:bg-gray-950 px-6 py-10">
-  <div class="max-w-3xl mx-auto flex flex-col gap-6">
-    <div class="flex items-center justify-between">
-      <div>
-        <h1 class="text-xl font-semibold text-gray-900 dark:text-white">
-          Welcome{{ authService.user()?.name ? ', ' + authService.user()?.name : '' }}
-        </h1>
-        <p class="text-sm text-gray-500 dark:text-gray-400">
-          Tracking {{ repos().length }}
-          repositor{{ repos().length === 1 ? 'y' : 'ies' }}.
+<div class="px-8 py-8 flex flex-col gap-8 max-w-5xl">
+  <div>
+    <h1 class="text-xl font-semibold text-white">Dashboard</h1>
+    <p class="text-sm text-gray-500">
+      An overview of the repositories you're tracking.
+    </p>
+  </div>
+
+  @if (errorMessage()) {
+    <p class="text-sm text-red-500">{{ errorMessage() }}</p>
+  }
+
+  @if (isLoading()) {
+    <p class="text-sm text-gray-500">Loading…</p>
+  } @else if (totalRepos() === 0) {
+    <div
+      class="rounded-lg border border-gray-800 px-4 py-10 text-center flex flex-col items-center gap-3"
+    >
+      <p class="text-sm text-gray-500">
+        You're not tracking any repositories yet.
+      </p>
+      <a
+        routerLink="/settings"
+        class="text-sm text-white font-medium hover:underline"
+        >Add repositories to track</a
+      >
+    </div>
+  } @else {
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div class="rounded-lg border border-gray-800 bg-gray-900/40 p-4">
+        <p class="text-xs text-gray-500">Tracked repos</p>
+        <p class="text-2xl font-semibold text-white mt-1">
+          {{ totalRepos() }}
         </p>
       </div>
-      <lib-ui-button type="button" variant="outline" (click)="logout()">
-        Sign out
-      </lib-ui-button>
+      <div class="rounded-lg border border-gray-800 bg-gray-900/40 p-4">
+        <p class="text-xs text-gray-500">Total stars</p>
+        <p class="text-2xl font-semibold text-white mt-1">
+          {{ totalStars() }}
+        </p>
+      </div>
+      <div class="rounded-lg border border-gray-800 bg-gray-900/40 p-4">
+        <p class="text-xs text-gray-500">Total forks</p>
+        <p class="text-2xl font-semibold text-white mt-1">
+          {{ totalForks() }}
+        </p>
+      </div>
+      <div class="rounded-lg border border-gray-800 bg-gray-900/40 p-4">
+        <p class="text-xs text-gray-500">Open issues</p>
+        <p class="text-2xl font-semibold text-white mt-1">
+          {{ totalOpenIssues() }}
+        </p>
+      </div>
     </div>
 
-    @if (errorMessage()) {
-      <p class="text-sm text-red-500">{{ errorMessage() }}</p>
-    }
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div class="rounded-lg border border-gray-800 bg-gray-900/40 p-4 flex flex-col gap-4">
+        <p class="text-sm font-medium text-white">Visibility</p>
 
-    @if (isLoading()) {
-      <p class="text-sm text-gray-500 dark:text-gray-400">Loading…</p>
-    } @else {
-      <div
-        class="flex flex-col rounded-lg border border-gray-200 dark:border-gray-800"
-      >
-        @for (repo of repos(); track repo.id) {
-          <a
-            [href]="repo.htmlUrl"
-            target="_blank"
-            rel="noopener"
-            class="flex items-center gap-3 px-4 py-3 border-b border-gray-200 dark:border-gray-800 last:border-b-0 hover:bg-gray-100 dark:hover:bg-gray-900"
-          >
-            <span class="flex-1 text-sm text-gray-900 dark:text-white">{{
-              repo.fullName
-            }}</span>
-            @if (repo.private) {
-              <span
-                class="text-xs text-gray-400 border border-gray-300 dark:border-gray-700 rounded px-1.5 py-0.5"
-                >Private</span
-              >
-            }
-          </a>
-        } @empty {
-          <p class="px-4 py-6 text-sm text-gray-500 dark:text-gray-400 text-center">
-            No repositories tracked yet.
-          </p>
-        }
+        <div class="flex items-center gap-4 text-xs text-gray-400">
+          <span class="flex items-center gap-1.5">
+            <span
+              class="size-2 rounded-full inline-block"
+              style="background-color: #3987e5"
+            ></span>
+            Public ({{ publicCount() }})
+          </span>
+          <span class="flex items-center gap-1.5">
+            <span
+              class="size-2 rounded-full inline-block"
+              style="background-color: #d95926"
+            ></span>
+            Private ({{ privateCount() }})
+          </span>
+        </div>
+
+        <div class="flex h-3 w-full gap-0.5">
+          @if (publicCount() > 0) {
+            <div
+              class="h-full"
+              [style.width.%]="publicWidthPercent()"
+              style="background-color: #3987e5; border-radius: 4px 0 0 4px"
+            ></div>
+          }
+          @if (privateCount() > 0) {
+            <div
+              class="h-full"
+              [style.width.%]="privateWidthPercent()"
+              style="background-color: #d95926; border-radius: 0 4px 4px 0"
+            ></div>
+          }
+        </div>
       </div>
 
-      <a
-        routerLink="/select-repos"
-        class="text-sm text-black dark:text-white font-medium hover:underline self-start"
+      <div class="rounded-lg border border-gray-800 bg-gray-900/40 p-4 flex flex-col gap-3">
+        <p class="text-sm font-medium text-white">Languages</p>
+        <div class="flex flex-col gap-2.5">
+          @for (slice of languageBreakdown(); track slice.language) {
+            <div class="flex items-center gap-3">
+              <span class="text-xs text-gray-400 w-20 shrink-0 truncate">{{
+                slice.language
+              }}</span>
+              <div class="flex-1 h-2.5">
+                <div
+                  class="h-full"
+                  [style.width.%]="slice.widthPercent"
+                  style="background-color: #3987e5; border-radius: 0 4px 4px 0"
+                ></div>
+              </div>
+              <span class="text-xs text-gray-500 w-6 text-right shrink-0">{{
+                slice.count
+              }}</span>
+            </div>
+          }
+        </div>
+      </div>
+
+      <div
+        class="rounded-lg border border-gray-800 bg-gray-900/40 p-4 flex flex-col gap-3 lg:col-span-2"
       >
-        Manage tracked repositories
-      </a>
-    }
-  </div>
+        <p class="text-sm font-medium text-white">Top repositories by stars</p>
+        @if (topReposByStars().length === 0) {
+          <p class="text-xs text-gray-500">No starred repositories yet.</p>
+        } @else {
+          <div class="flex flex-col gap-2.5">
+            @for (repo of topReposByStars(); track repo.id) {
+              <a
+                [routerLink]="['/repos', repo.id]"
+                class="flex items-center gap-3 group"
+              >
+                <span
+                  class="text-xs text-gray-400 group-hover:text-white w-40 shrink-0 truncate transition-colors"
+                  >{{ repo.fullName }}</span
+                >
+                <div class="flex-1 h-2.5">
+                  <div
+                    class="h-full"
+                    [style.width.%]="repo.widthPercent"
+                    style="background-color: #3987e5; border-radius: 0 4px 4px 0"
+                  ></div>
+                </div>
+                <span class="text-xs text-gray-500 w-8 text-right shrink-0">{{
+                  repo.stars
+                }}</span>
+              </a>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  }
 </div>

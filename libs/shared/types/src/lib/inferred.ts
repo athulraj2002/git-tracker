@@ -19,9 +19,12 @@ import type {
   OAuthCallbackQuerySchema,
   AuthUserSchema,
   AuthResponseSchema,
+  ConnectedIdentitySchema,
   SelectedRepoSchema,
   SetTrackedReposRequestSchema,
   TrackedRepoSchema,
+  RepoCommitSchema,
+  RepoDetailResponseSchema,
 } from '@org/zod-schemas';
 
 export type Metrics = z.infer<typeof MetricsSchema>;
@@ -46,7 +49,10 @@ export type OAuthCallbackQuery = z.infer<typeof OAuthCallbackQuerySchema>;
 
 export type AuthUser = z.infer<typeof AuthUserSchema>;
 export type AuthResponse = z.infer<typeof AuthResponseSchema>;
+export type ConnectedIdentity = z.infer<typeof ConnectedIdentitySchema>;
 
 export type SelectedRepo = z.infer<typeof SelectedRepoSchema>;
 export type SetTrackedReposRequest = z.infer<typeof SetTrackedReposRequestSchema>;
 export type TrackedRepo = z.infer<typeof TrackedRepoSchema>;
+export type RepoCommit = z.infer<typeof RepoCommitSchema>;
+export type RepoDetailResponse = z.infer<typeof RepoDetailResponseSchema>;

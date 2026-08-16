@@ -1,0 +1,98 @@
+<div class="px-8 py-8 flex flex-col gap-6 max-w-3xl">
+  <a
+    routerLink="/repos"
+    class="text-sm text-gray-500 hover:text-white transition-colors w-fit"
+    >&larr; Back to repositories</a
+  >
+
+  @if (errorMessage()) {
+    <p class="text-sm text-red-500">{{ errorMessage() }}</p>
+  }
+
+  @if (isLoading()) {
+    <p class="text-sm text-gray-500">Loading…</p>
+  } @else if (repo(); as repo) {
+    <div class="flex flex-col gap-3">
+      <div class="flex items-center gap-2 flex-wrap">
+        <h1 class="text-xl font-semibold text-white">{{ repo.fullName }}</h1>
+        @if (repo.private) {
+          <span
+            class="text-xs text-gray-400 border border-gray-700 rounded px-1.5 py-0.5"
+            >Private</span
+          >
+        }
+        <a
+          [href]="repo.htmlUrl"
+          target="_blank"
+          rel="noopener"
+          class="text-xs text-gray-500 hover:text-white transition-colors ml-auto"
+          >View on GitHub &rarr;</a
+        >
+      </div>
+
+      @if (repo.description) {
+        <p class="text-sm text-gray-400">{{ repo.description }}</p>
+      }
+
+      <div class="flex items-center gap-4 text-xs text-gray-500 flex-wrap">
+        @if (repo.language) {
+          <span class="flex items-center gap-1.5">
+            <span
+              class="size-2 rounded-full inline-block"
+              style="background-color: #3987e5"
+            ></span>
+            {{ repo.language }}
+          </span>
+        }
+        <span>★ {{ repo.stars }} stars</span>
+        <span>⑂ {{ repo.forks }} forks</span>
+        <span>{{ repo.openIssues }} open issues</span>
+        @if (repo.defaultBranch) {
+          <span>default branch: {{ repo.defaultBranch }}</span>
+        }
+      </div>
+    </div>
+
+    <div class="rounded-lg border border-gray-800 bg-gray-900/40 flex flex-col">
+      <div class="px-4 py-3 border-b border-gray-800">
+        <p class="text-sm font-medium text-white">Recent commits</p>
+      </div>
+      @if (commits().length === 0) {
+        <p class="px-4 py-6 text-sm text-gray-500 text-center">
+          No commits found.
+        </p>
+      } @else {
+        @for (commit of commits(); track commit.sha) {
+          <a
+            [href]="commit.htmlUrl"
+            target="_blank"
+            rel="noopener"
+            class="flex items-center gap-3 px-4 py-3 border-b border-gray-800 last:border-b-0 hover:bg-gray-900 transition-colors"
+          >
+            @if (commit.authorAvatarUrl) {
+              <img
+                [src]="commit.authorAvatarUrl"
+                alt=""
+                class="size-6 rounded-full shrink-0"
+              />
+            } @else {
+              <div
+                class="size-6 rounded-full bg-gray-800 shrink-0"
+              ></div>
+            }
+            <div class="min-w-0 flex-1">
+              <p class="text-sm text-white truncate">{{ commit.message }}</p>
+              <p class="text-xs text-gray-500">
+                {{ commit.authorLogin ?? 'Unknown author' }} &middot;
+                {{ commit.committedAt | date: 'mediumDate' }}
+              </p>
+            </div>
+            <span class="text-xs text-gray-600 font-mono shrink-0">{{
+              commit.sha.slice(0, 7)
+            }}</span>
+          </a>
+        }
+      }
+    </div>
+  }
+</div>

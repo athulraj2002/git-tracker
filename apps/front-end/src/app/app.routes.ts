@@ -23,9 +23,33 @@ export const appRoutes: Route[] = [
       import('./pages/select-repos/select-repos').then((m) => m.SelectRepos),
   },
   {
-    path: 'dashboard',
+    path: '',
     canActivate: [authGuard, hasTrackedReposGuard],
     loadComponent: () =>
-      import('./pages/dashboard/dashboard').then((m) => m.Dashboard),
+      import('./layout/app-shell/app-shell').then((m) => m.AppShell),
+    children: [
+      {
+        path: 'dashboard',
+        loadComponent: () =>
+          import('./pages/dashboard/dashboard').then((m) => m.Dashboard),
+      },
+      {
+        path: 'repos',
+        loadComponent: () =>
+          import('./pages/repos-list/repos-list').then((m) => m.ReposList),
+      },
+      {
+        path: 'repos/:id',
+        loadComponent: () =>
+          import('./pages/repo-detail/repo-detail').then(
+            (m) => m.RepoDetail,
+          ),
+      },
+      {
+        path: 'settings',
+        loadComponent: () =>
+          import('./pages/settings/settings').then((m) => m.Settings),
+      },
+    ],
   },
 ];

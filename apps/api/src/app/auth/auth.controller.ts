@@ -128,7 +128,20 @@ export class AuthController {
       id: user.id,
       name: user.name,
       email: user.email,
+      avatarUrl: user.avatarUrl,
       createdAt: user.createdAt.toISOString(),
     };
+  }
+
+  @Get('identities')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'List the providers connected to this account' })
+  async identities(@CurrentUser() authUser: AuthenticatedUser) {
+    const rows = await this.authService.getIdentities(authUser.sub);
+    return rows.map((row) => ({
+      provider: row.provider,
+      providerLogin: row.providerLogin,
+      createdAt: row.createdAt.toISOString(),
+    }));
   }
 }

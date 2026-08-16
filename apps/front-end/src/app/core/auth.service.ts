@@ -2,7 +2,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
-import type { AuthUser } from '@org/types';
+import type { AuthUser, ConnectedIdentity } from '@org/types';
 import { TOKEN_STORAGE_KEY, USER_STORAGE_KEY } from './auth.storage';
 
 export type OAuthProvider = 'github' | 'gitlab' | 'bitbucket';
@@ -34,6 +34,12 @@ export class AuthService {
     const user = await firstValueFrom(this.http.get<AuthUser>('/api/auth/me'));
     this._user.set(user);
     localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
+  }
+
+  getIdentities(): Promise<ConnectedIdentity[]> {
+    return firstValueFrom(
+      this.http.get<ConnectedIdentity[]>('/api/auth/identities'),
+    );
   }
 
   logout(): void {

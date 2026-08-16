@@ -80,6 +80,12 @@ export class AuthService {
     return this.db.query.users.findFirst({ where: eq(users.id, id) });
   }
 
+  getIdentities(userId: string) {
+    return this.db.query.userIdentities.findMany({
+      where: eq(userIdentities.userId, userId),
+    });
+  }
+
   private async buildAuthResponse(user: User): Promise<AuthResponse> {
     const accessToken = await this.jwtService.signAsync({
       sub: user.id,
@@ -90,6 +96,7 @@ export class AuthService {
         id: user.id,
         name: user.name,
         email: user.email,
+        avatarUrl: user.avatarUrl,
         createdAt: user.createdAt.toISOString(),
       },
       accessToken,

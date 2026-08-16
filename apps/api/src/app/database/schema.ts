@@ -1,5 +1,6 @@
 import {
   boolean,
+  integer,
   pgEnum,
   pgTable,
   text,
@@ -58,6 +59,12 @@ export const trackedRepos = pgTable(
     fullName: text('full_name').notNull(),
     private: boolean('private').notNull().default(false),
     htmlUrl: text('html_url').notNull(),
+    description: text('description'),
+    language: text('language'),
+    defaultBranch: text('default_branch'),
+    stars: integer('stars').notNull().default(0),
+    forks: integer('forks').notNull().default(0),
+    openIssues: integer('open_issues').notNull().default(0),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
