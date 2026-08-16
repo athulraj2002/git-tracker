@@ -18,6 +18,8 @@ export class InputField implements FormValueControl<string> {
   placeholder = input<string>('');
   hint = input<string>('');
   id = input<string>(this._uid);
+  /** Extra Tailwind classes appended to the input's own classes. */
+  class = input<string>('');
 
   readonly value = model<string>('');
   readonly disabled = input<boolean>(false);
@@ -42,6 +44,7 @@ export class InputField implements FormValueControl<string> {
       this.displayError()
         ? 'border-red-500 focus-visible:ring-red-500'
         : 'border-gray-300 dark:border-gray-600',
+      this.class(),
     ].join(' '),
   );
 

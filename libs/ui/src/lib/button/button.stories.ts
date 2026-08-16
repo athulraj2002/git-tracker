@@ -49,10 +49,17 @@ const meta: Meta<Button & { label: string }> = {
         defaultValue: { summary: 'button' },
       },
     },
+    class: {
+      control: 'text',
+      description: "Extra Tailwind classes appended to the button's own classes",
+      table: {
+        defaultValue: { summary: "''" },
+      },
+    },
   },
   render: (args) => ({
     props: args,
-    template: `<lib-ui-button [variant]="variant" [disabled]="disabled" [type]="type" [isLoading]="isLoading">{{ label }}</lib-ui-button>`,
+    template: `<lib-ui-button [variant]="variant" [disabled]="disabled" [type]="type" [isLoading]="isLoading" [class]="class">{{ label }}</lib-ui-button>`,
   }),
 };
 
@@ -120,6 +127,16 @@ export const Disabled: Story = {
     disabled: true,
     isLoading: false,
     type: 'button',
+  },
+};
+
+// ─── Custom classes ────────────────────────────────────────────────────────
+
+export const CustomClass: Story = {
+  args: {
+    label: 'Full width',
+    variant: 'primary',
+    class: 'w-full !rounded-full',
   },
 };
 

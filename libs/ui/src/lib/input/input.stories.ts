@@ -72,6 +72,10 @@ const meta: Meta<InputField> = {
     hint: { control: 'text' },
     invalid: { control: 'boolean' },
     touched: { control: 'boolean' },
+    class: {
+      control: 'text',
+      description: "Extra Tailwind classes appended to the input's own classes",
+    },
   },
   render: (args) => ({
     props: args,
@@ -84,6 +88,7 @@ const meta: Meta<InputField> = {
         [invalid]="invalid"
         [touched]="touched"
         [errors]="errors"
+        [class]="class"
       ></lib-ui-input>
     `,
   }),
@@ -145,6 +150,18 @@ export const NoLabel: Story = {
     hint: '',
     invalid: false,
     touched: false,
+  },
+};
+
+export const CustomClass: Story = {
+  args: {
+    label: 'Amount',
+    type: 'text',
+    placeholder: '0.00',
+    hint: '',
+    invalid: false,
+    touched: false,
+    class: 'text-right !border-blue-500',
   },
 };
 

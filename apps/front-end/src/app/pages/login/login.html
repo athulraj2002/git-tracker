@@ -57,6 +57,7 @@
       <lib-ui-button
         type="button"
         variant="outline"
+        class="w-full"
         [isLoading]="loadingProvider() === 'github'"
         [disabled]="loadingProvider() !== null"
         (click)="continueWith('github')"
@@ -85,6 +86,7 @@
       <lib-ui-button
         type="button"
         variant="outline"
+        [class]="'w-full'"
         [isLoading]="loadingProvider() === 'gitlab'"
         [disabled]="loadingProvider() !== null"
         (click)="continueWith('gitlab')"
@@ -106,6 +108,7 @@
       <lib-ui-button
         type="button"
         variant="outline"
+        [class]="'w-full'"
         [isLoading]="loadingProvider() === 'bitbucket'"
         [disabled]="loadingProvider() !== null"
         (click)="continueWith('bitbucket')"

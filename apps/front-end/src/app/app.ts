@@ -1,9 +1,8 @@
 import { Component } from '@angular/core';
 import { RouterModule } from '@angular/router';
-import { Button,Spinner } from '@org/ui';
 
 @Component({
-  imports: [RouterModule, Button, Spinner],
+  imports: [RouterModule],
   selector: 'app-root',
   templateUrl: './app.html',
   styleUrls: ['./app.css'],

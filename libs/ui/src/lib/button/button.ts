@@ -31,12 +31,16 @@ const variantClasses: Record<ButtonVariant, string> = {
  *
  * @input type Native button type. Defaults to `button`.
  *
+ * @input class Extra Tailwind classes appended to the button's own classes,
+ * so a parent can tweak styling (e.g. `class="w-full"`).
+ *
  */
 export class Button {
   variant = input<ButtonVariant>('primary');
   disabled = input<boolean>();
   type = input<'button' | 'submit' | 'reset'>('button');
   isLoading = input<boolean>(false);
+  class = input<string>('');
 
   classes = computed(() =>
     [
@@ -46,6 +50,7 @@ export class Button {
       'focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
       'disabled:opacity-50 disabled:cursor-not-allowed',
       variantClasses[this.variant()],
+      this.class(),
     ].join(' '),
   );
 }
