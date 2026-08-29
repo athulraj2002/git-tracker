@@ -1,7 +1,7 @@
 import { Component, computed, inject, linkedSignal, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { Button, Checkbox, Skeleton } from '@org/ui';
-import { ReposService } from '../../core/repos.service';
+import { ReposService } from '../../core/services/repos.service';
 import { extractErrorMessage } from '@org/helpers';
 
 @Component({

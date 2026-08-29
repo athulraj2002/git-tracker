@@ -1,4 +1,3 @@
-import { Injectable, inject } from '@angular/core';
 import { HttpClient, httpResource } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import type {
@@ -9,7 +8,9 @@ import type {
   TrackedRepo,
 } from '@org/types';
 
-@Injectable({ providedIn: 'root' })
+import { Service, inject } from '@angular/core';
+
+@Service()
 export class ReposService {
   private readonly http = inject(HttpClient);
 

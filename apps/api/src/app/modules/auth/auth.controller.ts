@@ -11,7 +11,7 @@ import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { FastifyReply } from 'fastify';
 import { OAuthCallbackQuerySchema } from '@org/zod-schemas';
 import type { OAuthCallbackQuery } from '@org/types';
-import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
+import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { AuthService } from './auth.service';
 import { BitbucketOAuthService } from './bitbucket-oauth.service';
 import { CurrentUser } from './current-user.decorator';

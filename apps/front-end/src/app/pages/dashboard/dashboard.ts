@@ -20,7 +20,7 @@ import {
   OTHER_LABEL,
   RANGE_DAYS,
 } from '../../common/data';
-import { ReposService } from '../../core/repos.service';
+import { ReposService } from '../../core/services/repos.service';
 
 const MAX_STACK_SERIES = 7;
 

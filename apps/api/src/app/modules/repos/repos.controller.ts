@@ -3,7 +3,7 @@ import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { SetTrackedReposRequestSchema } from '@org/zod-schemas';
 import type { SetTrackedReposRequest } from '@org/types';
 
-import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
+import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard, type AuthenticatedUser } from '../auth/jwt-auth.guard';
 import { ReposService } from './repos.service';

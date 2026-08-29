@@ -3,7 +3,7 @@ import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { Skeleton } from '@org/ui';
 import { ACCENT_COLOR } from '../../common/data';
-import { ReposService } from '../../core/repos.service';
+import { ReposService } from '../../core/services/repos.service';
 import { extractErrorMessage } from '@org/helpers';
 
 @Component({
