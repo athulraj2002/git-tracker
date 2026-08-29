@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Put, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Put, Query, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { SetTrackedReposRequestSchema } from '@org/zod-schemas';
 import type { SetTrackedReposRequest } from '@org/types';
@@ -33,6 +33,17 @@ export class ReposController {
     @Param('id') id: string,
   ) {
     return this.reposService.getRepoDetail(user.sub, id);
+  }
+
+  @Get('commits')
+  @ApiOperation({
+    summary: 'List recent commits across all tracked repositories',
+  })
+  getCommits(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('since') since?: string,
+  ) {
+    return this.reposService.getContributionActivity(user.sub, since);
   }
 
   @Put('tracked')

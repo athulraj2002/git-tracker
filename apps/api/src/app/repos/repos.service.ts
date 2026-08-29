@@ -7,6 +7,7 @@ import {
 import { and, eq } from 'drizzle-orm';
 import type {
   GithubRepo,
+  RepoCommitWithContext,
   RepoDetailResponse,
   SelectedRepo,
   TrackedRepo,
@@ -53,6 +54,43 @@ export class ReposService {
     );
 
     return { repo: toTrackedRepo(row), commits };
+  }
+
+  async getContributionActivity(
+    userId: string,
+    since?: string,
+  ): Promise<RepoCommitWithContext[]> {
+    const repos = await this.getTrackedRepos(userId);
+    if (repos.length === 0) {
+      return [];
+    }
+
+    const identity = await this.getGithubIdentity(userId);
+    const accessToken = identity.accessToken as string;
+
+    const perRepoCommits = await Promise.all(
+      repos.map(async (repo) => {
+        try {
+          const commits = await this.githubReposService.getCommits(
+            accessToken,
+            repo.fullName,
+            { since, perPage: 100 },
+          );
+          return commits.map((commit) => ({
+            ...commit,
+            repoId: repo.id,
+            repoFullName: repo.fullName,
+          }));
+        } catch {
+          // A single inaccessible/renamed/empty repo shouldn't fail the whole dashboard.
+          return [];
+        }
+      }),
+    );
+
+    return perRepoCommits
+      .flat()
+      .sort((a, b) => b.committedAt.localeCompare(a.committedAt));
   }
 
   async setTrackedRepos(

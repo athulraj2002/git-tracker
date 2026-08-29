@@ -46,3 +46,8 @@ export const RepoDetailResponseSchema = z.object({
   repo: TrackedRepoSchema,
   commits: z.array(RepoCommitSchema),
 });
+
+export const RepoCommitWithContextSchema = RepoCommitSchema.extend({
+  repoId: z.string().uuid(),
+  repoFullName: z.string(),
+});

@@ -1,4 +1,4 @@
-<div class="px-8 py-8 flex flex-col gap-8 max-w-5xl">
+<div class="px-8 py-8 flex flex-col gap-8">
   <div>
     <h1 class="text-xl font-semibold text-white">Dashboard</h1>
     <p class="text-sm text-gray-500">
@@ -19,39 +19,6 @@
         </div>
       }
     </div>
-
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <div class="rounded-lg border border-gray-800 bg-gray-900/40 p-4 flex flex-col gap-4">
-        <lib-ui-skeleton class="h-4 w-16" />
-        <div class="flex items-center gap-4">
-          <lib-ui-skeleton class="h-3 w-20" />
-          <lib-ui-skeleton class="h-3 w-20" />
-        </div>
-        <lib-ui-skeleton class="h-3 w-full" />
-      </div>
-
-      <div class="rounded-lg border border-gray-800 bg-gray-900/40 p-4 flex flex-col gap-3">
-        <lib-ui-skeleton class="h-4 w-24" />
-        @for (i of [0, 1, 2, 3]; track i) {
-          <div class="flex items-center gap-3">
-            <lib-ui-skeleton class="h-3 w-16 shrink-0" />
-            <lib-ui-skeleton class="h-2.5 flex-1" />
-            <lib-ui-skeleton class="h-3 w-6 shrink-0" />
-          </div>
-        }
-      </div>
-
-      <div class="rounded-lg border border-gray-800 bg-gray-900/40 p-4 flex flex-col gap-3 lg:col-span-2">
-        <lib-ui-skeleton class="h-4 w-48" />
-        @for (i of [0, 1, 2]; track i) {
-          <div class="flex items-center gap-3">
-            <lib-ui-skeleton class="h-3 w-40 shrink-0" />
-            <lib-ui-skeleton class="h-2.5 flex-1" />
-            <lib-ui-skeleton class="h-3 w-8 shrink-0" />
-          </div>
-        }
-      </div>
-    </div>
   } @else if (totalRepos() === 0) {
     <div
       class="rounded-lg border border-gray-800 px-4 py-10 text-center flex flex-col items-center gap-3"
@@ -69,21 +36,15 @@
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
       <div class="rounded-lg border border-gray-800 bg-gray-900/40 p-4">
         <p class="text-xs text-gray-500">Tracked repos</p>
-        <p class="text-2xl font-semibold text-white mt-1">
-          {{ totalRepos() }}
-        </p>
+        <p class="text-2xl font-semibold text-white mt-1">{{ totalRepos() }}</p>
       </div>
       <div class="rounded-lg border border-gray-800 bg-gray-900/40 p-4">
         <p class="text-xs text-gray-500">Total stars</p>
-        <p class="text-2xl font-semibold text-white mt-1">
-          {{ totalStars() }}
-        </p>
+        <p class="text-2xl font-semibold text-white mt-1">{{ totalStars() }}</p>
       </div>
       <div class="rounded-lg border border-gray-800 bg-gray-900/40 p-4">
         <p class="text-xs text-gray-500">Total forks</p>
-        <p class="text-2xl font-semibold text-white mt-1">
-          {{ totalForks() }}
-        </p>
+        <p class="text-2xl font-semibold text-white mt-1">{{ totalForks() }}</p>
       </div>
       <div class="rounded-lg border border-gray-800 bg-gray-900/40 p-4">
         <p class="text-xs text-gray-500">Open issues</p>
@@ -93,100 +54,195 @@
       </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <div class="rounded-lg border border-gray-800 bg-gray-900/40 p-4 flex flex-col gap-4">
-        <p class="text-sm font-medium text-white">Visibility</p>
+    <div class="flex flex-col gap-4">
+      <div class="flex items-center justify-between flex-wrap gap-3">
+        <p class="text-sm font-medium text-white">Contribution activity</p>
 
-        <div class="flex items-center gap-4 text-xs text-gray-400">
-          <span class="flex items-center gap-1.5">
-            <span
-              class="size-2 rounded-full inline-block"
-              style="background-color: #3987e5"
-            ></span>
-            Public ({{ publicCount() }})
-          </span>
-          <span class="flex items-center gap-1.5">
-            <span
-              class="size-2 rounded-full inline-block"
-              style="background-color: #d95926"
-            ></span>
-            Private ({{ privateCount() }})
-          </span>
-        </div>
+        <div class="flex items-center gap-2 flex-wrap">
+          <select
+            class="bg-gray-900 border border-gray-800 rounded-lg text-xs text-gray-300 px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-gray-600"
+            (change)="setDateRange($any($event.target).value)"
+          >
+            @for (option of dateRangeOptions; track option.key) {
+              <option [value]="option.key" [selected]="option.key === dateRangeKey()">
+                {{ option.label }}
+              </option>
+            }
+          </select>
 
-        <div class="flex h-3 w-full gap-0.5">
-          @if (publicCount() > 0) {
-            <div
-              class="h-full"
-              [style.width.%]="publicWidthPercent()"
-              style="background-color: #3987e5; border-radius: 4px 0 0 4px"
-            ></div>
-          }
-          @if (privateCount() > 0) {
-            <div
-              class="h-full"
-              [style.width.%]="privateWidthPercent()"
-              style="background-color: #d95926; border-radius: 0 4px 4px 0"
-            ></div>
-          }
-        </div>
-      </div>
+          <select
+            class="bg-gray-900 border border-gray-800 rounded-lg text-xs text-gray-300 px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-gray-600 max-w-40"
+            (change)="setRepoFilter($any($event.target).value)"
+          >
+            <option value="all" [selected]="selectedRepoId() === 'all'">
+              All repositories
+            </option>
+            @for (repo of repos(); track repo.id) {
+              <option [value]="repo.id" [selected]="repo.id === selectedRepoId()">
+                {{ repo.fullName }}
+              </option>
+            }
+          </select>
 
-      <div class="rounded-lg border border-gray-800 bg-gray-900/40 p-4 flex flex-col gap-3">
-        <p class="text-sm font-medium text-white">Languages</p>
-        <div class="flex flex-col gap-2.5">
-          @for (slice of languageBreakdown(); track slice.language) {
-            <div class="flex items-center gap-3">
-              <span class="text-xs text-gray-400 w-20 shrink-0 truncate">{{
-                slice.language
-              }}</span>
-              <div class="flex-1 h-2.5">
-                <div
-                  class="h-full"
-                  [style.width.%]="slice.widthPercent"
-                  style="background-color: #3987e5; border-radius: 0 4px 4px 0"
-                ></div>
-              </div>
-              <span class="text-xs text-gray-500 w-6 text-right shrink-0">{{
-                slice.count
-              }}</span>
-            </div>
-          }
-        </div>
-      </div>
-
-      <div
-        class="rounded-lg border border-gray-800 bg-gray-900/40 p-4 flex flex-col gap-3 lg:col-span-2"
-      >
-        <p class="text-sm font-medium text-white">Top repositories by stars</p>
-        @if (topReposByStars().length === 0) {
-          <p class="text-xs text-gray-500">No starred repositories yet.</p>
-        } @else {
-          <div class="flex flex-col gap-2.5">
-            @for (repo of topReposByStars(); track repo.id) {
-              <a
-                [routerLink]="['/repos', repo.id]"
-                class="flex items-center gap-3 group"
+          <select
+            class="bg-gray-900 border border-gray-800 rounded-lg text-xs text-gray-300 px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-gray-600 max-w-36"
+            (change)="setAuthorFilter($any($event.target).value)"
+          >
+            <option value="all" [selected]="selectedAuthor() === 'all'">
+              All contributors
+            </option>
+            @for (login of contributorOptions().logins; track login) {
+              <option [value]="login" [selected]="login === selectedAuthor()">
+                {{ login }}
+              </option>
+            }
+            @if (contributorOptions().hasUnknown) {
+              <option
+                [value]="unknownAuthor"
+                [selected]="unknownAuthor === selectedAuthor()"
               >
-                <span
-                  class="text-xs text-gray-400 group-hover:text-white w-40 shrink-0 truncate transition-colors"
-                  >{{ repo.fullName }}</span
-                >
-                <div class="flex-1 h-2.5">
-                  <div
-                    class="h-full"
-                    [style.width.%]="repo.widthPercent"
-                    style="background-color: #3987e5; border-radius: 0 4px 4px 0"
-                  ></div>
+                Unknown
+              </option>
+            }
+          </select>
+        </div>
+      </div>
+
+      @if (activityErrorMessage()) {
+        <p class="text-sm text-red-500">{{ activityErrorMessage() }}</p>
+      }
+
+      @if (isActivityLoading()) {
+        <div class="grid grid-cols-1 gap-4">
+          <div class="rounded-lg border border-gray-800 bg-gray-900/40 p-4 flex flex-col gap-4">
+            <lib-ui-skeleton class="h-3 w-32" />
+            <lib-ui-skeleton class="h-7 w-20" />
+            <div class="flex items-end gap-1 h-32">
+              @for (i of [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]; track i) {
+                <lib-ui-skeleton class="flex-1 h-full" />
+              }
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div class="rounded-lg border border-gray-800 bg-gray-900/40 p-4 flex flex-col gap-3">
+              <lib-ui-skeleton class="h-4 w-32" />
+              @for (i of [0, 1, 2, 3]; track i) {
+                <div class="flex items-center gap-3">
+                  <lib-ui-skeleton class="h-3 w-24 shrink-0" />
+                  <lib-ui-skeleton class="h-2.5 flex-1" />
+                  <lib-ui-skeleton class="h-3 w-6 shrink-0" />
                 </div>
-                <span class="text-xs text-gray-500 w-8 text-right shrink-0">{{
-                  repo.stars
-                }}</span>
-              </a>
+              }
+            </div>
+
+            <div class="rounded-lg border border-gray-800 bg-gray-900/40 p-4 flex flex-col gap-3">
+              <lib-ui-skeleton class="h-4 w-32" />
+              @for (i of [0, 1, 2, 3]; track i) {
+                <div class="flex items-center gap-3">
+                  <lib-ui-skeleton class="size-5 rounded-full shrink-0" />
+                  <lib-ui-skeleton class="h-3 w-20 shrink-0" />
+                  <lib-ui-skeleton class="h-2.5 flex-1" />
+                  <lib-ui-skeleton class="h-3 w-6 shrink-0" />
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+      } @else if (totalContributions() === 0) {
+        <div class="rounded-lg border border-gray-800 px-4 py-10 text-center">
+          <p class="text-sm text-gray-500">
+            No contributions found for the selected filters.
+          </p>
+        </div>
+      } @else {
+        <div class="rounded-lg border border-gray-800 bg-gray-900/40 p-4 flex flex-col gap-4">
+          <div>
+            <p class="text-xs text-gray-500">Contributions</p>
+            <p class="text-2xl font-semibold text-white mt-1">
+              {{ totalContributions() }}
+            </p>
+          </div>
+
+          <div class="flex items-end gap-1 h-32">
+            @for (bucket of activityByBucket(); track bucket.key) {
+              <div class="flex-1 h-full flex flex-col items-center justify-end gap-1">
+                <div
+                  class="w-full rounded-t"
+                  style="background-color: #3987e5; min-height: 2px"
+                  [style.height.%]="bucket.heightPercent"
+                  [attr.title]="bucket.count + ' contributions on ' + bucket.label"
+                ></div>
+                <span
+                  class="text-[10px] text-gray-600 truncate w-full text-center"
+                  >{{ bucket.showLabel ? bucket.label : '' }}</span
+                >
+              </div>
             }
           </div>
-        }
-      </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div class="rounded-lg border border-gray-800 bg-gray-900/40 p-4 flex flex-col gap-3">
+            <p class="text-sm font-medium text-white">Contributions by repo</p>
+            <div class="flex flex-col gap-2.5">
+              @for (repo of contributionsByRepo(); track repo.repoId) {
+                <a
+                  [routerLink]="['/repos', repo.repoId]"
+                  class="flex items-center gap-3 group"
+                >
+                  <span
+                    class="text-xs text-gray-400 group-hover:text-white w-28 shrink-0 truncate transition-colors"
+                    >{{ repo.repoFullName }}</span
+                  >
+                  <div class="flex-1 h-2.5">
+                    <div
+                      class="h-full"
+                      [style.width.%]="repo.widthPercent"
+                      style="background-color: #3987e5; border-radius: 0 4px 4px 0"
+                    ></div>
+                  </div>
+                  <span class="text-xs text-gray-500 w-6 text-right shrink-0">{{
+                    repo.count
+                  }}</span>
+                </a>
+              }
+            </div>
+          </div>
+
+          <div class="rounded-lg border border-gray-800 bg-gray-900/40 p-4 flex flex-col gap-3">
+            <p class="text-sm font-medium text-white">Top contributors</p>
+            <div class="flex flex-col gap-2.5">
+              @for (contributor of topContributors(); track contributor.author) {
+                <div class="flex items-center gap-3">
+                  @if (contributor.avatarUrl) {
+                    <img
+                      [src]="contributor.avatarUrl"
+                      alt=""
+                      class="size-5 rounded-full shrink-0"
+                    />
+                  } @else {
+                    <div class="size-5 rounded-full bg-gray-800 shrink-0"></div>
+                  }
+                  <span class="text-xs text-gray-400 w-20 shrink-0 truncate">{{
+                    contributor.author
+                  }}</span>
+                  <div class="flex-1 h-2.5">
+                    <div
+                      class="h-full"
+                      [style.width.%]="contributor.widthPercent"
+                      style="background-color: #3987e5; border-radius: 0 4px 4px 0"
+                    ></div>
+                  </div>
+                  <span class="text-xs text-gray-500 w-6 text-right shrink-0">{{
+                    contributor.count
+                  }}</span>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+      }
     </div>
   }
 </div>

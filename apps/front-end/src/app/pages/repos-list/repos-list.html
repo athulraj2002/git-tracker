@@ -1,10 +1,10 @@
-<div class="px-8 py-8 flex flex-col gap-6 max-w-5xl">
+<div class="px-8 py-8 flex flex-col gap-6">
   <div class="flex items-center justify-between">
     <div>
       <h1 class="text-xl font-semibold text-white">Repositories</h1>
       <p class="text-sm text-gray-500">
-        {{ repos().length }}
-        repositor{{ repos().length === 1 ? 'y' : 'ies' }} tracked.
+        {{ repos().length }} repositor{{ repos().length === 1 ? 'y' : 'ies' }}
+        tracked.
       </p>
     </div>
     <a
@@ -15,77 +15,75 @@
   </div>
 
   @if (errorMessage()) {
-    <p class="text-sm text-red-500">{{ errorMessage() }}</p>
-  }
-
-  @if (isLoading()) {
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-      @for (i of [0, 1, 2, 3, 4, 5]; track i) {
-        <div class="rounded-lg border border-gray-800 bg-gray-900/40 p-4 flex flex-col gap-2">
-          <lib-ui-skeleton class="h-4 w-40" />
-          <lib-ui-skeleton class="h-3 w-full" />
-          <div class="flex items-center gap-3 mt-1">
-            <lib-ui-skeleton class="h-3 w-14" />
-            <lib-ui-skeleton class="h-3 w-10" />
-            <lib-ui-skeleton class="h-3 w-16" />
-          </div>
-        </div>
-      }
-    </div>
-  } @else if (repos().length === 0) {
+  <p class="text-sm text-red-500">{{ errorMessage() }}</p>
+  } @if (isLoading()) {
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+    @for (i of [0, 1, 2, 3, 4, 5]; track i) {
     <div
-      class="rounded-lg border border-gray-800 px-4 py-10 text-center flex flex-col items-center gap-3"
+      class="rounded-lg border border-gray-800 bg-gray-900/40 p-4 flex flex-col gap-2"
     >
-      <p class="text-sm text-gray-500">
-        You're not tracking any repositories yet.
-      </p>
-      <a
-        routerLink="/settings"
-        class="text-sm text-white font-medium hover:underline"
-        >Add repositories to track</a
-      >
+      <lib-ui-skeleton class="h-4 w-40" />
+      <lib-ui-skeleton class="h-3 w-full" />
+      <div class="flex items-center gap-3 mt-1">
+        <lib-ui-skeleton class="h-3 w-14" />
+        <lib-ui-skeleton class="h-3 w-10" />
+        <lib-ui-skeleton class="h-3 w-16" />
+      </div>
     </div>
+    }
+  </div>
+  } @else if (repos().length === 0) {
+  <div
+    class="rounded-lg border border-gray-800 px-4 py-10 text-center flex flex-col items-center gap-3"
+  >
+    <p class="text-sm text-gray-500">
+      You're not tracking any repositories yet.
+    </p>
+    <a
+      routerLink="/settings"
+      class="text-sm text-white font-medium hover:underline"
+      >Add repositories to track</a
+    >
+  </div>
   } @else {
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-      @for (repo of repos(); track repo.id) {
-        <a
-          [routerLink]="['/repos', repo.id]"
-          class="rounded-lg border border-gray-800 bg-gray-900/40 p-4 flex flex-col gap-2 hover:border-gray-700 transition-colors"
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+    @for (repo of repos(); track repo.id) {
+    <a
+      [routerLink]="['/repos', repo.id]"
+      class="rounded-lg border border-gray-800 bg-gray-900/40 p-4 flex flex-col gap-2 hover:border-gray-700 transition-colors"
+    >
+      <div class="flex items-center justify-between gap-2">
+        <span class="text-sm font-medium text-white truncate"
+          >{{ repo.fullName }}</span
         >
-          <div class="flex items-center justify-between gap-2">
-            <span class="text-sm font-medium text-white truncate">{{
-              repo.fullName
-            }}</span>
-            @if (repo.private) {
-              <span
-                class="text-xs text-gray-400 border border-gray-700 rounded px-1.5 py-0.5 shrink-0"
-                >Private</span
-              >
-            }
-          </div>
+        @if (repo.private) {
+        <span
+          class="text-xs text-gray-400 border border-gray-700 rounded px-1.5 py-0.5 shrink-0"
+          >Private</span
+        >
+        }
+      </div>
 
-          @if (repo.description) {
-            <p class="text-xs text-gray-500 line-clamp-2">
-              {{ repo.description }}
-            </p>
-          }
-
-          <div class="flex items-center gap-3 text-xs text-gray-500 mt-1">
-            @if (repo.language) {
-              <span class="flex items-center gap-1.5">
-                <span
-                  class="size-2 rounded-full inline-block"
-                  style="background-color: #3987e5"
-                ></span>
-                {{ repo.language }}
-              </span>
-            }
-            <span>★ {{ repo.stars }}</span>
-            <span>⑂ {{ repo.forks }}</span>
-            <span>{{ repo.openIssues }} issues</span>
-          </div>
-        </a>
+      @if (repo.description) {
+      <p class="text-xs text-gray-500 line-clamp-2">{{ repo.description }}</p>
       }
-    </div>
+
+      <div class="flex items-center gap-3 text-xs text-gray-500 mt-1">
+        @if (repo.language) {
+        <span class="flex items-center gap-1.5">
+          <span
+            class="size-2 rounded-full inline-block"
+            style="background-color: #3987e5"
+          ></span>
+          {{ repo.language }}
+        </span>
+        }
+        <span>★ {{ repo.stars }}</span>
+        <span>⑂ {{ repo.forks }}</span>
+        <span>{{ repo.openIssues }} issues</span>
+      </div>
+    </a>
+    }
+  </div>
   }
 </div>

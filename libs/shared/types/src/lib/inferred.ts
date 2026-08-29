@@ -25,6 +25,7 @@ import type {
   TrackedRepoSchema,
   RepoCommitSchema,
   RepoDetailResponseSchema,
+  RepoCommitWithContextSchema,
 } from '@org/zod-schemas';
 
 export type Metrics = z.infer<typeof MetricsSchema>;
@@ -56,3 +57,4 @@ export type SetTrackedReposRequest = z.infer<typeof SetTrackedReposRequestSchema
 export type TrackedRepo = z.infer<typeof TrackedRepoSchema>;
 export type RepoCommit = z.infer<typeof RepoCommitSchema>;
 export type RepoDetailResponse = z.infer<typeof RepoDetailResponseSchema>;
+export type RepoCommitWithContext = z.infer<typeof RepoCommitWithContextSchema>;

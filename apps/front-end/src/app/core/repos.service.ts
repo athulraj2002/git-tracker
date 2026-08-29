@@ -3,6 +3,7 @@ import { HttpClient, httpResource } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import type {
   GithubRepo,
+  RepoCommitWithContext,
   RepoDetailResponse,
   SelectedRepo,
   TrackedRepo,
@@ -29,6 +30,20 @@ export class ReposService {
       const repoId = id();
       return repoId ? `/api/repos/tracked/${repoId}` : undefined;
     });
+  }
+
+  contributionActivity(since: () => string | undefined) {
+    return httpResource<RepoCommitWithContext[]>(
+      () => {
+        const sinceValue = since();
+        const params: Record<string, string> = {};
+        if (sinceValue) {
+          params['since'] = sinceValue;
+        }
+        return { url: '/api/repos/commits', params };
+      },
+      { defaultValue: [] },
+    );
   }
 
   setTrackedRepos(repos: SelectedRepo[]): Promise<TrackedRepo[]> {

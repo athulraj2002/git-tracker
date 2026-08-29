@@ -43,9 +43,17 @@ export class GithubReposService {
   async getCommits(
     accessToken: string,
     fullName: string,
+    options?: { since?: string; perPage?: number },
   ): Promise<RepoCommit[]> {
+    const params = new URLSearchParams({
+      per_page: String(options?.perPage ?? 10),
+    });
+    if (options?.since) {
+      params.set('since', options.since);
+    }
+
     const response = await fetch(
-      `https://api.github.com/repos/${fullName}/commits?per_page=10`,
+      `https://api.github.com/repos/${fullName}/commits?${params.toString()}`,
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,
