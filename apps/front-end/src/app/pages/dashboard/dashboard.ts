@@ -13,10 +13,9 @@ export interface DateRangeOption {
   label: string;
 }
 
-export interface ActivityBucket {
-  key: string;
-  label: string;
-  count: number;
+export interface ActivitySeries {
+  name: string;
+  data: number[];
 }
 
 export interface RepoContribution {
@@ -30,10 +29,24 @@ export interface ContributorStat {
   count: number;
 }
 
-const ACCENT_COLOR = '#3987e5';
 const CHART_FORE_COLOR = '#9ca3af';
 const CHART_LABEL_COLOR = '#6b7280';
 const CHART_GRID_COLOR = '#1f2937';
+
+// Dark-mode categorical order validated for adjacent-pair use (stacks, bars, lines).
+const CATEGORICAL_COLORS = [
+  '#3987e5',
+  '#d95926',
+  '#199e70',
+  '#c98500',
+  '#d55181',
+  '#008300',
+  '#9085e9',
+  '#e66767',
+];
+const OTHER_COLOR = '#52525b';
+const OTHER_LABEL = 'Other';
+const MAX_STACK_SERIES = 7;
 
 const UNKNOWN_AUTHOR = '__unknown__';
 const TOP_REPO_COUNT = 8;
@@ -182,18 +195,120 @@ export class Dashboard {
 
   protected readonly totalContributions = computed(() => this.filteredCommits().length);
 
-  protected readonly activityByBucket = computed<ActivityBucket[]>(() => {
-    const granularity = granularityFor(this.dateRangeKey());
-    const counts = new Map<string, { label: string; count: number }>();
-    for (const commit of this.filteredCommits()) {
-      const { key, label } = bucketFor(new Date(commit.committedAt), granularity);
-      const existing = counts.get(key);
-      counts.set(key, { label, count: (existing?.count ?? 0) + 1 });
+  /**
+   * Ranks the secondary-dimension keys by total, caps at MAX_STACK_SERIES,
+   * folds the rest into an "Other" series, and assigns the validated
+   * categorical color order. Shared by every stacked chart on this page.
+   */
+  private buildStackedSeries(
+    categoryKeys: string[],
+    secondaryTotals: Map<string, number>,
+    grid: Map<string, Map<string, number>>,
+  ): { series: ActivitySeries[]; colors: string[] } {
+    const ranked = [...secondaryTotals.entries()].sort((a, b) => b[1] - a[1]);
+    const top = ranked.slice(0, MAX_STACK_SERIES).map(([key]) => key);
+    const overflow = ranked.slice(MAX_STACK_SERIES).map(([key]) => key);
+
+    const series: ActivitySeries[] = top.map((key) => ({
+      name: key,
+      data: categoryKeys.map((categoryKey) => grid.get(key)?.get(categoryKey) ?? 0),
+    }));
+    const colors = top.map((_, index) => CATEGORICAL_COLORS[index % CATEGORICAL_COLORS.length]);
+
+    if (overflow.length > 0) {
+      series.push({
+        name: OTHER_LABEL,
+        data: categoryKeys.map((categoryKey) =>
+          overflow.reduce((sum, key) => sum + (grid.get(key)?.get(categoryKey) ?? 0), 0),
+        ),
+      });
+      colors.push(OTHER_COLOR);
     }
 
-    return [...counts.entries()]
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([key, value]) => ({ key, label: value.label, count: value.count }));
+    return { series, colors };
+  }
+
+  private readonly activityStack = computed(() => {
+    const granularity = granularityFor(this.dateRangeKey());
+    const bucketOrder: string[] = [];
+    const bucketLabels = new Map<string, string>();
+    const authorTotals = new Map<string, number>();
+    const grid = new Map<string, Map<string, number>>();
+
+    for (const commit of this.filteredCommits()) {
+      const { key: bucketKey, label } = bucketFor(new Date(commit.committedAt), granularity);
+      if (!bucketLabels.has(bucketKey)) {
+        bucketLabels.set(bucketKey, label);
+        bucketOrder.push(bucketKey);
+      }
+
+      const author = commit.authorLogin ?? 'Unknown';
+      authorTotals.set(author, (authorTotals.get(author) ?? 0) + 1);
+      if (!grid.has(author)) {
+        grid.set(author, new Map());
+      }
+      const authorGrid = grid.get(author) as Map<string, number>;
+      authorGrid.set(bucketKey, (authorGrid.get(bucketKey) ?? 0) + 1);
+    }
+
+    bucketOrder.sort();
+    const categories = bucketOrder.map((key) => bucketLabels.get(key) as string);
+    const { series, colors } = this.buildStackedSeries(bucketOrder, authorTotals, grid);
+    return { categories, series, colors };
+  });
+
+  private readonly repoStack = computed(() => {
+    const repos = this.contributionsByRepo();
+    const repoIds = new Set(repos.map((repo) => repo.repoId));
+    const categories = repos.map((repo) => repo.repoFullName);
+
+    const authorTotals = new Map<string, number>();
+    const grid = new Map<string, Map<string, number>>();
+
+    for (const commit of this.filteredCommits()) {
+      if (!repoIds.has(commit.repoId)) continue;
+      const author = commit.authorLogin ?? 'Unknown';
+      authorTotals.set(author, (authorTotals.get(author) ?? 0) + 1);
+      if (!grid.has(author)) {
+        grid.set(author, new Map());
+      }
+      const authorGrid = grid.get(author) as Map<string, number>;
+      authorGrid.set(commit.repoId, (authorGrid.get(commit.repoId) ?? 0) + 1);
+    }
+
+    const { series, colors } = this.buildStackedSeries(
+      repos.map((repo) => repo.repoId),
+      authorTotals,
+      grid,
+    );
+    return { categories, series, colors };
+  });
+
+  private readonly contributorStack = computed(() => {
+    const contributors = this.topContributors();
+    const authorNames = new Set(contributors.map((contributor) => contributor.author));
+    const categories = contributors.map((contributor) => contributor.author);
+
+    const repoTotals = new Map<string, number>();
+    const grid = new Map<string, Map<string, number>>();
+
+    for (const commit of this.filteredCommits()) {
+      const author = commit.authorLogin ?? 'Unknown';
+      if (!authorNames.has(author)) continue;
+      repoTotals.set(commit.repoFullName, (repoTotals.get(commit.repoFullName) ?? 0) + 1);
+      if (!grid.has(commit.repoFullName)) {
+        grid.set(commit.repoFullName, new Map());
+      }
+      const repoGrid = grid.get(commit.repoFullName) as Map<string, number>;
+      repoGrid.set(author, (repoGrid.get(author) ?? 0) + 1);
+    }
+
+    const { series, colors } = this.buildStackedSeries(
+      contributors.map((contributor) => contributor.author),
+      repoTotals,
+      grid,
+    );
+    return { categories, series, colors };
   });
 
   protected readonly contributionsByRepo = computed<RepoContribution[]>(() => {
@@ -232,37 +347,50 @@ export class Dashboard {
       }));
   });
 
-  protected readonly activityChartSeries = computed<ApexAxisChartSeries>(() => [
-    { name: 'Contributions', data: this.activityByBucket().map((bucket) => bucket.count) },
-  ]);
+  protected readonly activityChartSeries = computed<ApexAxisChartSeries>(
+    () => this.activityStack().series,
+  );
   protected readonly activityChartXaxis = computed<ApexXAxis>(() => ({
-    categories: this.activityByBucket().map((bucket) => bucket.label),
+    categories: this.activityStack().categories,
     labels: { style: AXIS_LABEL_STYLE },
     axisBorder: { show: false },
     axisTicks: { show: false },
   }));
+  protected readonly activityChartColors = computed<string[]>(
+    () => this.activityStack().colors,
+  );
   protected readonly activityChart: ApexChart = {
     ...BASE_CHART,
     type: 'bar',
-    height: 240,
+    height: 280,
+    stacked: true,
   };
   protected readonly activityPlotOptions = {
-    bar: { borderRadius: 4, columnWidth: '55%' },
+    bar: { borderRadius: 4, borderRadiusApplication: 'end' as const, columnWidth: '55%' },
+  };
+  protected readonly stackedLegend = {
+    show: true,
+    position: 'bottom' as const,
+    fontSize: '11px',
+    labels: { colors: CHART_FORE_COLOR },
+    markers: { size: 6 },
   };
 
-  protected readonly repoChartSeries = computed<ApexAxisChartSeries>(() => [
-    { name: 'Contributions', data: this.contributionsByRepo().map((repo) => repo.count) },
-  ]);
+  protected readonly repoChartSeries = computed<ApexAxisChartSeries>(
+    () => this.repoStack().series,
+  );
   protected readonly repoChartXaxis = computed<ApexXAxis>(() => ({
-    categories: this.contributionsByRepo().map((repo) => repo.repoFullName),
+    categories: this.repoStack().categories,
     labels: { style: AXIS_LABEL_STYLE },
     axisBorder: { show: false },
     axisTicks: { show: false },
   }));
+  protected readonly repoChartColors = computed<string[]>(() => this.repoStack().colors);
   protected readonly repoChart = computed<ApexChart>(() => ({
     ...BASE_CHART,
     type: 'bar',
-    height: Math.max(160, this.contributionsByRepo().length * 40),
+    height: Math.max(200, this.contributionsByRepo().length * 40 + 50),
+    stacked: true,
     events: {
       dataPointSelection: (_event, _chart, options) => {
         const repo = this.contributionsByRepo()[options?.dataPointIndex ?? -1];
@@ -273,37 +401,36 @@ export class Dashboard {
     },
   }));
 
-  protected readonly contributorChartSeries = computed<ApexAxisChartSeries>(() => [
-    {
-      name: 'Contributions',
-      data: this.topContributors().map((contributor) => contributor.count),
-    },
-  ]);
+  protected readonly contributorChartSeries = computed<ApexAxisChartSeries>(
+    () => this.contributorStack().series,
+  );
   protected readonly contributorChartXaxis = computed<ApexXAxis>(() => ({
-    categories: this.topContributors().map((contributor) => contributor.author),
+    categories: this.contributorStack().categories,
     labels: { style: AXIS_LABEL_STYLE },
     axisBorder: { show: false },
     axisTicks: { show: false },
   }));
+  protected readonly contributorChartColors = computed<string[]>(
+    () => this.contributorStack().colors,
+  );
   protected readonly contributorChart = computed<ApexChart>(() => ({
     ...BASE_CHART,
     type: 'bar',
-    height: Math.max(160, this.topContributors().length * 40),
+    height: Math.max(200, this.topContributors().length * 40 + 50),
+    stacked: true,
   }));
 
   protected readonly horizontalPlotOptions = {
-    bar: { horizontal: true, borderRadius: 4, barHeight: '55%', distributed: false },
+    bar: {
+      horizontal: true,
+      borderRadius: 4,
+      borderRadiusApplication: 'end' as const,
+      barHeight: '55%',
+    },
   };
-  protected readonly barColors = [ACCENT_COLOR];
   protected readonly noDataLabels = { enabled: false };
-  protected readonly endDataLabels = {
-    enabled: true,
-    style: { colors: ['#e5e7eb'], fontSize: '11px' },
-    offsetX: 8,
-  };
   protected readonly chartGrid = { borderColor: CHART_GRID_COLOR, strokeDashArray: 3 };
-  protected readonly chartTooltip = { theme: 'dark' as const };
-  protected readonly chartLegend = { show: false };
+  protected readonly stackedTooltip = { theme: 'dark' as const, shared: true, intersect: false };
 
   protected setDateRange(key: string): void {
     this.dateRangeKey.set(key as DateRangeKey);

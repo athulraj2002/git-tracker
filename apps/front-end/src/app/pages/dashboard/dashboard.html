@@ -169,11 +169,11 @@
             [series]="activityChartSeries()"
             [xaxis]="activityChartXaxis()"
             [plotOptions]="activityPlotOptions"
-            [colors]="barColors"
+            [colors]="activityChartColors()"
             [dataLabels]="noDataLabels"
             [grid]="chartGrid"
-            [tooltip]="chartTooltip"
-            [legend]="chartLegend"
+            [tooltip]="stackedTooltip"
+            [legend]="stackedLegend"
           ></apx-chart>
         </div>
 
@@ -185,11 +185,11 @@
               [series]="repoChartSeries()"
               [xaxis]="repoChartXaxis()"
               [plotOptions]="horizontalPlotOptions"
-              [colors]="barColors"
-              [dataLabels]="endDataLabels"
+              [colors]="repoChartColors()"
+              [dataLabels]="noDataLabels"
               [grid]="chartGrid"
-              [tooltip]="chartTooltip"
-              [legend]="chartLegend"
+              [tooltip]="stackedTooltip"
+              [legend]="stackedLegend"
             ></apx-chart>
           </div>
 
@@ -200,11 +200,11 @@
               [series]="contributorChartSeries()"
               [xaxis]="contributorChartXaxis()"
               [plotOptions]="horizontalPlotOptions"
-              [colors]="barColors"
-              [dataLabels]="endDataLabels"
+              [colors]="contributorChartColors()"
+              [dataLabels]="noDataLabels"
               [grid]="chartGrid"
-              [tooltip]="chartTooltip"
-              [legend]="chartLegend"
+              [tooltip]="stackedTooltip"
+              [legend]="stackedLegend"
             ></apx-chart>
           </div>
         </div>
