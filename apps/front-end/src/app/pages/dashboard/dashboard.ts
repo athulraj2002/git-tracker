@@ -2,103 +2,40 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { ChartComponent, type ApexAxisChartSeries, type ApexChart, type ApexXAxis } from 'ng-apexcharts';
 import { Skeleton } from '@org/ui';
-import type { RepoCommitWithContext } from '@org/types';
+import type {
+  ActivitySeries,
+  ContributorStat,
+  DateRangeKey,
+  RepoCommitWithContext,
+  RepoContribution,
+} from '@org/types';
+import { bucketFor, extractErrorMessage, granularityFor } from '@org/helpers';
+import {
+  CATEGORICAL_COLORS,
+  CHART_FORE_COLOR,
+  CHART_GRID_COLOR,
+  CHART_LABEL_COLOR,
+  DATE_RANGE_OPTIONS,
+  OTHER_COLOR,
+  OTHER_LABEL,
+  RANGE_DAYS,
+} from '../../common/data';
 import { ReposService } from '../../core/repos.service';
-import { extractErrorMessage } from '../../core/http-error';
 
-export type DateRangeKey = '7d' | '30d' | '90d' | '365d';
-
-export interface DateRangeOption {
-  key: DateRangeKey;
-  label: string;
-}
-
-export interface ActivitySeries {
-  name: string;
-  data: number[];
-}
-
-export interface RepoContribution {
-  repoId: string;
-  repoFullName: string;
-  count: number;
-}
-
-export interface ContributorStat {
-  author: string;
-  count: number;
-}
-
-const CHART_FORE_COLOR = '#9ca3af';
-const CHART_LABEL_COLOR = '#6b7280';
-const CHART_GRID_COLOR = '#1f2937';
-
-// Dark-mode categorical order validated for adjacent-pair use (stacks, bars, lines).
-const CATEGORICAL_COLORS = [
-  '#3987e5',
-  '#d95926',
-  '#199e70',
-  '#c98500',
-  '#d55181',
-  '#008300',
-  '#9085e9',
-  '#e66767',
-];
-const OTHER_COLOR = '#52525b';
-const OTHER_LABEL = 'Other';
 const MAX_STACK_SERIES = 7;
+
+// Keeps horizontal bars a constant thickness regardless of how many rows
+// there are, instead of stretching a single bar to fill a tall chart.
+const BAR_ROW_HEIGHT = 40;
+// Measured against the rendered chart: legend (fixed 30px) + x-axis labels +
+// the padding ApexCharts reserves around the plot area. Getting this wrong
+// starves a single-row chart's one bar of nearly all its slot, since that
+// deficit doesn't scale down with fewer rows the way BAR_ROW_HEIGHT does.
+const BAR_CHART_CHROME = 96;
 
 const UNKNOWN_AUTHOR = '__unknown__';
 const TOP_REPO_COUNT = 8;
 const TOP_CONTRIBUTOR_COUNT = 6;
-
-const RANGE_DAYS: Record<DateRangeKey, number> = {
-  '7d': 7,
-  '30d': 30,
-  '90d': 90,
-  '365d': 365,
-};
-
-export const DATE_RANGE_OPTIONS: DateRangeOption[] = [
-  { key: '7d', label: 'Last 7 days' },
-  { key: '30d', label: 'Last 30 days' },
-  { key: '90d', label: 'Last 90 days' },
-  { key: '365d', label: 'Last 12 months' },
-];
-
-type Granularity = 'day' | 'week' | 'month';
-
-function granularityFor(range: DateRangeKey): Granularity {
-  if (range === '365d') return 'month';
-  if (range === '90d') return 'week';
-  return 'day';
-}
-
-function startOfWeek(date: Date): Date {
-  const d = new Date(date);
-  const day = (d.getDay() + 6) % 7;
-  d.setDate(d.getDate() - day);
-  return d;
-}
-
-function bucketFor(date: Date, granularity: Granularity): { key: string; label: string } {
-  if (granularity === 'month') {
-    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-    const label = date.toLocaleDateString(undefined, { month: 'short', year: '2-digit' });
-    return { key, label };
-  }
-  if (granularity === 'week') {
-    const start = startOfWeek(date);
-    return {
-      key: start.toISOString().slice(0, 10),
-      label: start.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
-    };
-  }
-  return {
-    key: date.toISOString().slice(0, 10),
-    label: date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
-  };
-}
 
 const BASE_CHART: Partial<ApexChart> = {
   background: 'transparent',
@@ -355,6 +292,7 @@ export class Dashboard {
     labels: { style: AXIS_LABEL_STYLE },
     axisBorder: { show: false },
     axisTicks: { show: false },
+    crosshairs: { show: false },
   }));
   protected readonly activityChartColors = computed<string[]>(
     () => this.activityStack().colors,
@@ -370,6 +308,13 @@ export class Dashboard {
   };
   protected readonly stackedLegend = {
     show: true,
+    // Without this, ApexCharts hides the legend entirely for a single-series
+    // chart, which frees up extra vertical space and makes that chart's bars
+    // render thicker than an otherwise-identical multi-series chart at the
+    // same height. Forcing it on (and to a fixed height) keeps every stacked
+    // chart's legend footprint - and therefore its bar thickness - constant.
+    showForSingleSeries: true,
+    height: 30,
     position: 'bottom' as const,
     fontSize: '11px',
     labels: { colors: CHART_FORE_COLOR },
@@ -389,7 +334,7 @@ export class Dashboard {
   protected readonly repoChart = computed<ApexChart>(() => ({
     ...BASE_CHART,
     type: 'bar',
-    height: Math.max(200, this.contributionsByRepo().length * 40 + 50),
+    height: this.contributionsByRepo().length * BAR_ROW_HEIGHT + BAR_CHART_CHROME,
     stacked: true,
     events: {
       dataPointSelection: (_event, _chart, options) => {
@@ -416,7 +361,7 @@ export class Dashboard {
   protected readonly contributorChart = computed<ApexChart>(() => ({
     ...BASE_CHART,
     type: 'bar',
-    height: Math.max(200, this.topContributors().length * 40 + 50),
+    height: this.topContributors().length * BAR_ROW_HEIGHT + BAR_CHART_CHROME,
     stacked: true,
   }));
 

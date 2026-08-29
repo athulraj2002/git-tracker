@@ -2,7 +2,7 @@ import { Component, computed, inject, linkedSignal, signal } from '@angular/core
 import { Button, Checkbox, Skeleton } from '@org/ui';
 import { AuthService } from '../../core/auth.service';
 import { ReposService } from '../../core/repos.service';
-import { extractErrorMessage } from '../../core/http-error';
+import { extractErrorMessage } from '@org/helpers';
 
 @Component({
   selector: 'app-settings',

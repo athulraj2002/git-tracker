@@ -1,8 +1,9 @@
 import { Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Skeleton } from '@org/ui';
+import { ACCENT_COLOR } from '../../common/data';
 import { ReposService } from '../../core/repos.service';
-import { extractErrorMessage } from '../../core/http-error';
+import { extractErrorMessage } from '@org/helpers';
 
 @Component({
   selector: 'app-repos-list',
@@ -10,6 +11,8 @@ import { extractErrorMessage } from '../../core/http-error';
   templateUrl: './repos-list.html',
 })
 export class ReposList {
+  protected readonly accentColor = ACCENT_COLOR;
+
   private readonly reposService = inject(ReposService);
 
   private readonly reposResource = this.reposService.trackedRepos();

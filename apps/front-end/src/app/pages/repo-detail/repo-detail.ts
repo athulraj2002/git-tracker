@@ -2,8 +2,9 @@ import { Component, computed, inject, input } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { Skeleton } from '@org/ui';
+import { ACCENT_COLOR } from '../../common/data';
 import { ReposService } from '../../core/repos.service';
-import { extractErrorMessage } from '../../core/http-error';
+import { extractErrorMessage } from '@org/helpers';
 
 @Component({
   selector: 'app-repo-detail',
@@ -11,6 +12,8 @@ import { extractErrorMessage } from '../../core/http-error';
   templateUrl: './repo-detail.html',
 })
 export class RepoDetail {
+  protected readonly accentColor = ACCENT_COLOR;
+
   private readonly reposService = inject(ReposService);
 
   readonly id = input<string>();

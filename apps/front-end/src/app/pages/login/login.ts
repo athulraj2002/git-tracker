@@ -1,7 +1,8 @@
 import { Component, inject, signal } from '@angular/core';
 import { Button } from '@org/ui';
-import { AuthService, type OAuthProvider } from '../../core/auth.service';
-import { extractErrorMessage } from '../../core/http-error';
+import type { OAuthProvider } from '@org/types';
+import { AuthService } from '../../core/auth.service';
+import { extractErrorMessage } from '@org/helpers';
 
 @Component({
   selector: 'app-login',

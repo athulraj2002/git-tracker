@@ -2,10 +2,8 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient, httpResource } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
-import type { AuthUser, ConnectedIdentity } from '@org/types';
+import type { AuthUser, ConnectedIdentity, OAuthProvider } from '@org/types';
 import { TOKEN_STORAGE_KEY, USER_STORAGE_KEY } from './auth.storage';
-
-export type OAuthProvider = 'github' | 'gitlab' | 'bitbucket';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
