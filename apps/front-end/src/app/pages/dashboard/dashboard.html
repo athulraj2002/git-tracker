@@ -156,7 +156,7 @@
           </p>
         </div>
       } @else {
-        <div class="rounded-lg border border-gray-800 bg-gray-900/40 p-4 flex flex-col gap-4">
+        <div class="rounded-lg border border-gray-800 bg-gray-900/40 p-4 flex flex-col gap-2">
           <div>
             <p class="text-xs text-gray-500">Contributions</p>
             <p class="text-2xl font-semibold text-white mt-1">
@@ -164,82 +164,48 @@
             </p>
           </div>
 
-          <div class="flex items-end gap-1 h-32">
-            @for (bucket of activityByBucket(); track bucket.key) {
-              <div class="flex-1 h-full flex flex-col items-center justify-end gap-1">
-                <div
-                  class="w-full rounded-t"
-                  style="background-color: #3987e5; min-height: 2px"
-                  [style.height.%]="bucket.heightPercent"
-                  [attr.title]="bucket.count + ' contributions on ' + bucket.label"
-                ></div>
-                <span
-                  class="text-[10px] text-gray-600 truncate w-full text-center"
-                  >{{ bucket.showLabel ? bucket.label : '' }}</span
-                >
-              </div>
-            }
-          </div>
+          <apx-chart
+            [chart]="activityChart"
+            [series]="activityChartSeries()"
+            [xaxis]="activityChartXaxis()"
+            [plotOptions]="activityPlotOptions"
+            [colors]="barColors"
+            [dataLabels]="noDataLabels"
+            [grid]="chartGrid"
+            [tooltip]="chartTooltip"
+            [legend]="chartLegend"
+          ></apx-chart>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div class="rounded-lg border border-gray-800 bg-gray-900/40 p-4 flex flex-col gap-3">
+          <div class="rounded-lg border border-gray-800 bg-gray-900/40 p-4 flex flex-col gap-2">
             <p class="text-sm font-medium text-white">Contributions by repo</p>
-            <div class="flex flex-col gap-2.5">
-              @for (repo of contributionsByRepo(); track repo.repoId) {
-                <a
-                  [routerLink]="['/repos', repo.repoId]"
-                  class="flex items-center gap-3 group"
-                >
-                  <span
-                    class="text-xs text-gray-400 group-hover:text-white w-28 shrink-0 truncate transition-colors"
-                    >{{ repo.repoFullName }}</span
-                  >
-                  <div class="flex-1 h-2.5">
-                    <div
-                      class="h-full"
-                      [style.width.%]="repo.widthPercent"
-                      style="background-color: #3987e5; border-radius: 0 4px 4px 0"
-                    ></div>
-                  </div>
-                  <span class="text-xs text-gray-500 w-6 text-right shrink-0">{{
-                    repo.count
-                  }}</span>
-                </a>
-              }
-            </div>
+            <apx-chart
+              [chart]="repoChart()"
+              [series]="repoChartSeries()"
+              [xaxis]="repoChartXaxis()"
+              [plotOptions]="horizontalPlotOptions"
+              [colors]="barColors"
+              [dataLabels]="endDataLabels"
+              [grid]="chartGrid"
+              [tooltip]="chartTooltip"
+              [legend]="chartLegend"
+            ></apx-chart>
           </div>
 
-          <div class="rounded-lg border border-gray-800 bg-gray-900/40 p-4 flex flex-col gap-3">
+          <div class="rounded-lg border border-gray-800 bg-gray-900/40 p-4 flex flex-col gap-2">
             <p class="text-sm font-medium text-white">Top contributors</p>
-            <div class="flex flex-col gap-2.5">
-              @for (contributor of topContributors(); track contributor.author) {
-                <div class="flex items-center gap-3">
-                  @if (contributor.avatarUrl) {
-                    <img
-                      [src]="contributor.avatarUrl"
-                      alt=""
-                      class="size-5 rounded-full shrink-0"
-                    />
-                  } @else {
-                    <div class="size-5 rounded-full bg-gray-800 shrink-0"></div>
-                  }
-                  <span class="text-xs text-gray-400 w-20 shrink-0 truncate">{{
-                    contributor.author
-                  }}</span>
-                  <div class="flex-1 h-2.5">
-                    <div
-                      class="h-full"
-                      [style.width.%]="contributor.widthPercent"
-                      style="background-color: #3987e5; border-radius: 0 4px 4px 0"
-                    ></div>
-                  </div>
-                  <span class="text-xs text-gray-500 w-6 text-right shrink-0">{{
-                    contributor.count
-                  }}</span>
-                </div>
-              }
-            </div>
+            <apx-chart
+              [chart]="contributorChart()"
+              [series]="contributorChartSeries()"
+              [xaxis]="contributorChartXaxis()"
+              [plotOptions]="horizontalPlotOptions"
+              [colors]="barColors"
+              [dataLabels]="endDataLabels"
+              [grid]="chartGrid"
+              [tooltip]="chartTooltip"
+              [legend]="chartLegend"
+            ></apx-chart>
           </div>
         </div>
       }

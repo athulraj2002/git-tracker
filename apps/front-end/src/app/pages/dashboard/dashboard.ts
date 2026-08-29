@@ -1,5 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
+import { ChartComponent, type ApexAxisChartSeries, type ApexChart, type ApexXAxis } from 'ng-apexcharts';
 import { Skeleton } from '@org/ui';
 import type { RepoCommitWithContext } from '@org/types';
 import { ReposService } from '../../core/repos.service';
@@ -16,23 +17,23 @@ export interface ActivityBucket {
   key: string;
   label: string;
   count: number;
-  heightPercent: number;
-  showLabel: boolean;
 }
 
 export interface RepoContribution {
   repoId: string;
   repoFullName: string;
   count: number;
-  widthPercent: number;
 }
 
 export interface ContributorStat {
   author: string;
-  avatarUrl: string | null;
   count: number;
-  widthPercent: number;
 }
+
+const ACCENT_COLOR = '#3987e5';
+const CHART_FORE_COLOR = '#9ca3af';
+const CHART_LABEL_COLOR = '#6b7280';
+const CHART_GRID_COLOR = '#1f2937';
 
 const UNKNOWN_AUTHOR = '__unknown__';
 const TOP_REPO_COUNT = 8;
@@ -86,13 +87,23 @@ function bucketFor(date: Date, granularity: Granularity): { key: string; label: 
   };
 }
 
+const BASE_CHART: Partial<ApexChart> = {
+  background: 'transparent',
+  foreColor: CHART_FORE_COLOR,
+  fontFamily: 'inherit',
+  toolbar: { show: false },
+};
+
+const AXIS_LABEL_STYLE = { colors: CHART_LABEL_COLOR, fontSize: '11px' };
+
 @Component({
   selector: 'app-dashboard',
-  imports: [RouterLink, Skeleton],
+  imports: [RouterLink, Skeleton, ChartComponent],
   templateUrl: './dashboard.html',
 })
 export class Dashboard {
   private readonly reposService = inject(ReposService);
+  private readonly router = inject(Router);
 
   protected readonly dateRangeOptions = DATE_RANGE_OPTIONS;
   protected readonly unknownAuthor = UNKNOWN_AUTHOR;
@@ -180,18 +191,9 @@ export class Dashboard {
       counts.set(key, { label, count: (existing?.count ?? 0) + 1 });
     }
 
-    const entries = [...counts.entries()]
+    return [...counts.entries()]
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([key, value]) => ({ key, ...value }));
-    const maxCount = Math.max(1, ...entries.map((entry) => entry.count));
-    const labelStep = Math.max(1, Math.ceil(entries.length / 12));
-    return entries.map((entry, index) => ({
-      key: entry.key,
-      label: entry.label,
-      count: entry.count,
-      heightPercent: Math.round((entry.count / maxCount) * 100),
-      showLabel: index % labelStep === 0 || index === entries.length - 1,
-    }));
+      .map(([key, value]) => ({ key, label: value.label, count: value.count }));
   });
 
   protected readonly contributionsByRepo = computed<RepoContribution[]>(() => {
@@ -204,40 +206,104 @@ export class Dashboard {
       });
     }
 
-    const sorted = [...counts.entries()]
+    return [...counts.entries()]
       .sort((a, b) => b[1].count - a[1].count)
-      .slice(0, TOP_REPO_COUNT);
-    const maxCount = Math.max(1, ...sorted.map(([, value]) => value.count));
-    return sorted.map(([repoId, value]) => ({
-      repoId,
-      repoFullName: value.repoFullName,
-      count: value.count,
-      widthPercent: Math.round((value.count / maxCount) * 100),
-    }));
+      .slice(0, TOP_REPO_COUNT)
+      .map(([repoId, value]) => ({
+        repoId,
+        repoFullName: value.repoFullName,
+        count: value.count,
+      }));
   });
 
   protected readonly topContributors = computed<ContributorStat[]>(() => {
-    const counts = new Map<string, { avatarUrl: string | null; count: number }>();
+    const counts = new Map<string, number>();
     for (const commit of this.filteredCommits()) {
       const author = commit.authorLogin ?? UNKNOWN_AUTHOR;
-      const existing = counts.get(author);
-      counts.set(author, {
-        avatarUrl: existing?.avatarUrl ?? commit.authorAvatarUrl,
-        count: (existing?.count ?? 0) + 1,
-      });
+      counts.set(author, (counts.get(author) ?? 0) + 1);
     }
 
-    const sorted = [...counts.entries()]
-      .sort((a, b) => b[1].count - a[1].count)
-      .slice(0, TOP_CONTRIBUTOR_COUNT);
-    const maxCount = Math.max(1, ...sorted.map(([, value]) => value.count));
-    return sorted.map(([author, value]) => ({
-      author: author === UNKNOWN_AUTHOR ? 'Unknown' : author,
-      avatarUrl: value.avatarUrl,
-      count: value.count,
-      widthPercent: Math.round((value.count / maxCount) * 100),
-    }));
+    return [...counts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, TOP_CONTRIBUTOR_COUNT)
+      .map(([author, count]) => ({
+        author: author === UNKNOWN_AUTHOR ? 'Unknown' : author,
+        count,
+      }));
   });
+
+  protected readonly activityChartSeries = computed<ApexAxisChartSeries>(() => [
+    { name: 'Contributions', data: this.activityByBucket().map((bucket) => bucket.count) },
+  ]);
+  protected readonly activityChartXaxis = computed<ApexXAxis>(() => ({
+    categories: this.activityByBucket().map((bucket) => bucket.label),
+    labels: { style: AXIS_LABEL_STYLE },
+    axisBorder: { show: false },
+    axisTicks: { show: false },
+  }));
+  protected readonly activityChart: ApexChart = {
+    ...BASE_CHART,
+    type: 'bar',
+    height: 240,
+  };
+  protected readonly activityPlotOptions = {
+    bar: { borderRadius: 4, columnWidth: '55%' },
+  };
+
+  protected readonly repoChartSeries = computed<ApexAxisChartSeries>(() => [
+    { name: 'Contributions', data: this.contributionsByRepo().map((repo) => repo.count) },
+  ]);
+  protected readonly repoChartXaxis = computed<ApexXAxis>(() => ({
+    categories: this.contributionsByRepo().map((repo) => repo.repoFullName),
+    labels: { style: AXIS_LABEL_STYLE },
+    axisBorder: { show: false },
+    axisTicks: { show: false },
+  }));
+  protected readonly repoChart = computed<ApexChart>(() => ({
+    ...BASE_CHART,
+    type: 'bar',
+    height: Math.max(160, this.contributionsByRepo().length * 40),
+    events: {
+      dataPointSelection: (_event, _chart, options) => {
+        const repo = this.contributionsByRepo()[options?.dataPointIndex ?? -1];
+        if (repo) {
+          this.router.navigate(['/repos', repo.repoId]);
+        }
+      },
+    },
+  }));
+
+  protected readonly contributorChartSeries = computed<ApexAxisChartSeries>(() => [
+    {
+      name: 'Contributions',
+      data: this.topContributors().map((contributor) => contributor.count),
+    },
+  ]);
+  protected readonly contributorChartXaxis = computed<ApexXAxis>(() => ({
+    categories: this.topContributors().map((contributor) => contributor.author),
+    labels: { style: AXIS_LABEL_STYLE },
+    axisBorder: { show: false },
+    axisTicks: { show: false },
+  }));
+  protected readonly contributorChart = computed<ApexChart>(() => ({
+    ...BASE_CHART,
+    type: 'bar',
+    height: Math.max(160, this.topContributors().length * 40),
+  }));
+
+  protected readonly horizontalPlotOptions = {
+    bar: { horizontal: true, borderRadius: 4, barHeight: '55%', distributed: false },
+  };
+  protected readonly barColors = [ACCENT_COLOR];
+  protected readonly noDataLabels = { enabled: false };
+  protected readonly endDataLabels = {
+    enabled: true,
+    style: { colors: ['#e5e7eb'], fontSize: '11px' },
+    offsetX: 8,
+  };
+  protected readonly chartGrid = { borderColor: CHART_GRID_COLOR, strokeDashArray: 3 };
+  protected readonly chartTooltip = { theme: 'dark' as const };
+  protected readonly chartLegend = { show: false };
 
   protected setDateRange(key: string): void {
     this.dateRangeKey.set(key as DateRangeKey);
