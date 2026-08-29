@@ -1,7 +1,9 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
+import type { TrackedRepo } from '@org/types';
 import { AuthService } from '../../core/auth.service';
-import { ReposService } from '../../core/repos.service';
 import { extractErrorMessage } from '../../core/http-error';
 
 @Component({
@@ -13,7 +15,7 @@ export class AuthCallback implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly authService = inject(AuthService);
-  private readonly reposService = inject(ReposService);
+  private readonly http = inject(HttpClient);
 
   protected readonly errorMessage = signal('');
 
@@ -26,7 +28,9 @@ export class AuthCallback implements OnInit {
 
     try {
       await this.authService.completeOAuthLogin(token);
-      const tracked = await this.reposService.getTrackedRepos();
+      const tracked = await firstValueFrom(
+        this.http.get<TrackedRepo[]>('/api/repos/tracked'),
+      );
       await this.router.navigateByUrl(
         tracked.length > 0 ? '/dashboard' : '/select-repos',
       );

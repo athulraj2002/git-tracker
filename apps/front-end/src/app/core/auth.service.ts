@@ -1,5 +1,5 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, httpResource } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import type { AuthUser, ConnectedIdentity } from '@org/types';
@@ -36,10 +36,10 @@ export class AuthService {
     localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
   }
 
-  getIdentities(): Promise<ConnectedIdentity[]> {
-    return firstValueFrom(
-      this.http.get<ConnectedIdentity[]>('/api/auth/identities'),
-    );
+  identities() {
+    return httpResource<ConnectedIdentity[]>(() => '/api/auth/identities', {
+      defaultValue: [],
+    });
   }
 
   logout(): void {

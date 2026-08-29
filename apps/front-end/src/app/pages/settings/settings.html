@@ -11,7 +11,43 @@
   }
 
   @if (isLoading()) {
-    <p class="text-sm text-gray-500">Loading…</p>
+    <section class="rounded-lg border border-gray-800 bg-gray-900/40 p-5 flex flex-col gap-4">
+      <lib-ui-skeleton class="h-4 w-16" />
+
+      <div class="flex items-center gap-3">
+        <lib-ui-skeleton class="size-12 rounded-full shrink-0" />
+        <div class="flex flex-col gap-1.5">
+          <lib-ui-skeleton class="h-3.5 w-32" />
+          <lib-ui-skeleton class="h-3 w-40" />
+        </div>
+      </div>
+
+      <div class="border-t border-gray-800 pt-4 flex flex-col gap-2">
+        <lib-ui-skeleton class="h-3 w-28" />
+        <div class="flex items-center justify-between">
+          <lib-ui-skeleton class="h-3.5 w-14" />
+          <lib-ui-skeleton class="h-3.5 w-20" />
+        </div>
+      </div>
+    </section>
+
+    <section class="rounded-lg border border-gray-800 bg-gray-900/40 p-5 flex flex-col gap-4">
+      <div class="flex flex-col gap-1.5">
+        <lib-ui-skeleton class="h-4 w-40" />
+        <lib-ui-skeleton class="h-3 w-64" />
+      </div>
+
+      <div class="flex flex-col rounded-lg border border-gray-800">
+        @for (i of [0, 1, 2, 3, 4, 5]; track i) {
+          <div class="flex items-center gap-3 px-4 py-3 border-b border-gray-800 last:border-b-0">
+            <lib-ui-skeleton class="size-4 rounded shrink-0" />
+            <lib-ui-skeleton class="h-3.5 flex-1" />
+          </div>
+        }
+      </div>
+
+      <lib-ui-skeleton class="h-8 w-40 rounded-lg" />
+    </section>
   } @else {
     <section class="rounded-lg border border-gray-800 bg-gray-900/40 p-5 flex flex-col gap-4">
       <p class="text-sm font-medium text-white">Profile</p>
@@ -59,6 +95,9 @@
 
       @if (savedMessage()) {
         <p class="text-sm text-green-500">{{ savedMessage() }}</p>
+      }
+      @if (saveErrorMessage()) {
+        <p class="text-sm text-red-500">{{ saveErrorMessage() }}</p>
       }
 
       <div

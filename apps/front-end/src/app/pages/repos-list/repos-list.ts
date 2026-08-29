@@ -1,30 +1,25 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import type { TrackedRepo } from '@org/types';
+import { Skeleton } from '@org/ui';
 import { ReposService } from '../../core/repos.service';
 import { extractErrorMessage } from '../../core/http-error';
 
 @Component({
   selector: 'app-repos-list',
-  imports: [RouterLink],
+  imports: [RouterLink, Skeleton],
   templateUrl: './repos-list.html',
 })
-export class ReposList implements OnInit {
+export class ReposList {
   private readonly reposService = inject(ReposService);
 
-  protected readonly repos = signal<TrackedRepo[]>([]);
-  protected readonly isLoading = signal(true);
-  protected readonly errorMessage = signal('');
+  private readonly reposResource = this.reposService.trackedRepos();
 
-  async ngOnInit(): Promise<void> {
-    try {
-      this.repos.set(await this.reposService.getTrackedRepos());
-    } catch (error) {
-      this.errorMessage.set(
-        extractErrorMessage(error, 'Unable to load your repositories.'),
-      );
-    } finally {
-      this.isLoading.set(false);
-    }
-  }
+  protected readonly repos = this.reposResource.value;
+  protected readonly isLoading = computed(
+    () => this.reposResource.status() === 'loading',
+  );
+  protected readonly errorMessage = computed(() => {
+    const error = this.reposResource.error();
+    return error ? extractErrorMessage(error, 'Unable to load your repositories.') : '';
+  });
 }

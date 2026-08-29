@@ -1,52 +1,51 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
-import { Button, Checkbox } from '@org/ui';
-import type { ConnectedIdentity, GithubRepo } from '@org/types';
+import { Component, computed, inject, linkedSignal, signal } from '@angular/core';
+import { Button, Checkbox, Skeleton } from '@org/ui';
 import { AuthService } from '../../core/auth.service';
 import { ReposService } from '../../core/repos.service';
 import { extractErrorMessage } from '../../core/http-error';
 
 @Component({
   selector: 'app-settings',
-  imports: [Button, Checkbox],
+  imports: [Button, Checkbox, Skeleton],
   templateUrl: './settings.html',
 })
-export class Settings implements OnInit {
+export class Settings {
   protected readonly authService = inject(AuthService);
   private readonly reposService = inject(ReposService);
 
-  protected readonly identities = signal<ConnectedIdentity[]>([]);
+  private readonly identitiesResource = this.authService.identities();
+  private readonly availableResource = this.reposService.availableRepos();
+  private readonly trackedResource = this.reposService.trackedRepos();
 
-  protected readonly availableRepos = signal<GithubRepo[]>([]);
-  protected readonly selectedIds = signal<Set<number>>(new Set());
-  protected readonly isLoading = signal(true);
+  protected readonly identities = this.identitiesResource.value;
+  protected readonly availableRepos = this.availableResource.value;
+
+  protected readonly selectedIds = linkedSignal<Set<number>>(() =>
+    new Set(
+      this.trackedResource
+        .value()
+        .filter((repo) => repo.provider === 'github')
+        .map((repo) => Number(repo.providerRepoId)),
+    ),
+  );
+
+  protected readonly isLoading = computed(
+    () =>
+      this.identitiesResource.status() === 'loading' ||
+      this.availableResource.status() === 'loading' ||
+      this.trackedResource.status() === 'loading',
+  );
+  protected readonly errorMessage = computed(() => {
+    const error =
+      this.identitiesResource.error() ??
+      this.availableResource.error() ??
+      this.trackedResource.error();
+    return error ? extractErrorMessage(error, 'Unable to load your settings.') : '';
+  });
+
   protected readonly isSaving = signal(false);
-  protected readonly errorMessage = signal('');
   protected readonly savedMessage = signal('');
-
-  async ngOnInit(): Promise<void> {
-    try {
-      const [identities, available, tracked] = await Promise.all([
-        this.authService.getIdentities(),
-        this.reposService.getAvailableRepos(),
-        this.reposService.getTrackedRepos(),
-      ]);
-      this.identities.set(identities);
-      this.availableRepos.set(available);
-      this.selectedIds.set(
-        new Set(
-          tracked
-            .filter((repo) => repo.provider === 'github')
-            .map((repo) => Number(repo.providerRepoId)),
-        ),
-      );
-    } catch (error) {
-      this.errorMessage.set(
-        extractErrorMessage(error, 'Unable to load your settings.'),
-      );
-    } finally {
-      this.isLoading.set(false);
-    }
-  }
+  protected readonly saveErrorMessage = signal('');
 
   protected setSelected(repoId: number, checked: boolean): void {
     this.savedMessage.set('');
@@ -60,8 +59,8 @@ export class Settings implements OnInit {
   }
 
   protected async saveRepos(): Promise<void> {
-    this.errorMessage.set('');
     this.savedMessage.set('');
+    this.saveErrorMessage.set('');
     this.isSaving.set(true);
     try {
       const selected = this.availableRepos().filter((repo) =>
@@ -81,9 +80,10 @@ export class Settings implements OnInit {
           openIssues: repo.openIssues,
         })),
       );
+      this.trackedResource.reload();
       this.savedMessage.set('Your tracked repositories have been updated.');
     } catch (error) {
-      this.errorMessage.set(
+      this.saveErrorMessage.set(
         extractErrorMessage(error, 'Unable to save your selected repositories.'),
       );
     } finally {

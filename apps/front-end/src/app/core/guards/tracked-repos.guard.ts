@@ -1,12 +1,16 @@
 import { inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { Router, type CanActivateFn } from '@angular/router';
-import { ReposService } from '../repos.service';
+import { firstValueFrom } from 'rxjs';
+import type { TrackedRepo } from '@org/types';
 
 export const hasTrackedReposGuard: CanActivateFn = async () => {
-  const reposService = inject(ReposService);
+  const http = inject(HttpClient);
   const router = inject(Router);
   try {
-    const repos = await reposService.getTrackedRepos();
+    const repos = await firstValueFrom(
+      http.get<TrackedRepo[]>('/api/repos/tracked'),
+    );
     return repos.length > 0 ? true : router.parseUrl('/select-repos');
   } catch {
     return router.parseUrl('/login');
