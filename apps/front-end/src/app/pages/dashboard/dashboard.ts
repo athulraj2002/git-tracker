@@ -106,7 +106,12 @@ export class Dashboard {
   private readonly since = computed(() => {
     const date = new Date();
     date.setDate(date.getDate() - RANGE_DAYS[this.dateRangeKey()]);
-    return date.toISOString();
+    // Date-only, not a full datetime: GitHub's API accepts either, and this
+    // keeps the value stable to the day instead of down to the millisecond -
+    // otherwise every remount of this component (e.g. navigating away and
+    // back) produces a new `since` from `new Date()`, busting the response
+    // cache even when the date-range filter hasn't actually changed.
+    return date.toISOString().slice(0, 10);
   });
 
   private readonly reposResource = this.reposService.trackedRepos();

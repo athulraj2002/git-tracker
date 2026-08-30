@@ -4,11 +4,13 @@ import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import type { AuthUser, ConnectedIdentity, OAuthProvider } from '@org/types';
 import { TOKEN_STORAGE_KEY, USER_STORAGE_KEY } from '../auth.storage';
+import { HttpCacheService } from './http-cache.service';
 
 @Service()
 export class AuthService {
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
+  private readonly httpCache = inject(HttpCacheService);
 
   private readonly _user = signal<AuthUser | null>(this.readStoredUser());
   private readonly _accessToken = signal<string | null>(
@@ -45,6 +47,9 @@ export class AuthService {
     this._accessToken.set(null);
     localStorage.removeItem(TOKEN_STORAGE_KEY);
     localStorage.removeItem(USER_STORAGE_KEY);
+    // Without this, a different user logging in on the same tab right after
+    // could see the previous user's cached responses until their TTL expires.
+    this.httpCache.clear();
     this.router.navigateByUrl('/login');
   }
 
