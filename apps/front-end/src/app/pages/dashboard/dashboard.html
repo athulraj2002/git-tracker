@@ -157,24 +157,73 @@
         </div>
       } @else {
         <div class="rounded-lg border border-gray-800 bg-gray-900/40 p-4 flex flex-col gap-2">
-          <div>
-            <p class="text-xs text-gray-500">Contributions</p>
-            <p class="text-2xl font-semibold text-white mt-1">
-              {{ totalContributions() }}
-            </p>
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <p class="text-xs text-gray-500">Contributions</p>
+              <p class="text-2xl font-semibold text-white mt-1">
+                {{ totalContributions() }}
+              </p>
+            </div>
+
+            <div class="flex items-center gap-0.5 bg-gray-900 border border-gray-800 rounded-lg p-0.5">
+              <button
+                type="button"
+                class="px-2 py-1 rounded-md text-xs transition-colors"
+                [class.bg-gray-800]="activityView() === 'bar'"
+                [class.text-white]="activityView() === 'bar'"
+                [class.text-gray-500]="activityView() !== 'bar'"
+                (click)="setActivityView('bar')"
+              >
+                Bars
+              </button>
+              <button
+                type="button"
+                class="px-2 py-1 rounded-md text-xs transition-colors"
+                [class.bg-gray-800]="activityView() === 'heatmap'"
+                [class.text-white]="activityView() === 'heatmap'"
+                [class.text-gray-500]="activityView() !== 'heatmap'"
+                (click)="setActivityView('heatmap')"
+              >
+                Heatmap
+              </button>
+            </div>
           </div>
 
-          <apx-chart
-            [chart]="activityChart"
-            [series]="activityChartSeries()"
-            [xaxis]="activityChartXaxis()"
-            [plotOptions]="activityPlotOptions"
-            [colors]="activityChartColors()"
-            [dataLabels]="noDataLabels"
-            [grid]="chartGrid"
-            [tooltip]="stackedTooltip"
-            [legend]="stackedLegend"
-          ></apx-chart>
+          @if (activityView() === 'heatmap') {
+            <apx-chart
+              [chart]="activityHeatmapChart"
+              [series]="activityHeatmapSeries()"
+              [xaxis]="activityHeatmapXaxis()"
+              [yaxis]="activityHeatmapYaxis"
+              [plotOptions]="activityHeatmapPlotOptions()"
+              [colors]="activityHeatmapColors"
+              [dataLabels]="noDataLabels"
+              [grid]="chartGrid"
+              [stroke]="activityHeatmapStroke"
+              [states]="activityHeatmapStates"
+              [tooltip]="activityHeatmapTooltip()"
+              [legend]="{ show: false }"
+            ></apx-chart>
+            <div class="flex items-center justify-end gap-1.5 text-xs text-gray-500">
+              <span>Less</span>
+              @for (color of activityHeatmapLegend; track color) {
+                <span class="size-3 rounded-sm" [style.background-color]="color"></span>
+              }
+              <span>More</span>
+            </div>
+          } @else {
+            <apx-chart
+              [chart]="activityChart"
+              [series]="activityChartSeries()"
+              [xaxis]="activityChartXaxis()"
+              [plotOptions]="activityPlotOptions"
+              [colors]="activityChartColors()"
+              [dataLabels]="noDataLabels"
+              [grid]="chartGrid"
+              [tooltip]="stackedTooltip"
+              [legend]="stackedLegend"
+            ></apx-chart>
+          }
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -186,9 +235,9 @@
               [xaxis]="repoChartXaxis()"
               [plotOptions]="horizontalPlotOptions"
               [colors]="repoChartColors()"
-              [dataLabels]="noDataLabels"
+              [dataLabels]="insideBarDataLabels"
               [grid]="chartGrid"
-              [tooltip]="stackedTooltip"
+              [tooltip]="noTooltip"
               [legend]="stackedLegend"
             ></apx-chart>
           </div>
@@ -201,9 +250,9 @@
               [xaxis]="contributorChartXaxis()"
               [plotOptions]="horizontalPlotOptions"
               [colors]="contributorChartColors()"
-              [dataLabels]="noDataLabels"
+              [dataLabels]="insideBarDataLabels"
               [grid]="chartGrid"
-              [tooltip]="stackedTooltip"
+              [tooltip]="noTooltip"
               [legend]="stackedLegend"
             ></apx-chart>
           </div>

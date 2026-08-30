@@ -1,6 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { ChartComponent, type ApexAxisChartSeries, type ApexChart, type ApexXAxis } from 'ng-apexcharts';
+import type { ApexTooltipCustomOpts } from 'apexcharts';
 import { Skeleton } from '@org/ui';
 import type {
   ActivitySeries,
@@ -9,8 +10,9 @@ import type {
   RepoCommitWithContext,
   RepoContribution,
 } from '@org/types';
-import { bucketFor, extractErrorMessage, granularityFor } from '@org/helpers';
+import { bucketFor, extractErrorMessage, granularityFor, localDateKey } from '@org/helpers';
 import {
+  ACCENT_COLOR,
   CATEGORICAL_COLORS,
   CHART_FORE_COLOR,
   CHART_GRID_COLOR,
@@ -36,6 +38,45 @@ const BAR_CHART_CHROME = 96;
 const UNKNOWN_AUTHOR = '__unknown__';
 const TOP_REPO_COUNT = 8;
 const TOP_CONTRIBUTOR_COUNT = 6;
+
+// Indexed Sun=0..Sat=6.
+const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+// GitHub's own calendar only labels every other weekday to avoid crowding the
+// axis. This has to go through yaxis.labels.formatter rather than just
+// blanking the unwanted series names: ApexCharts auto-thins heatmap row
+// labels to whatever fits the chart's pixel height, by array position, and
+// that thinning would just as easily strip out Mon/Wed/Fri as the blanks
+// depending on how many rows fit - a user-supplied formatter is the
+// documented way to opt out of that auto-thinning entirely.
+const VISIBLE_WEEKDAYS = new Set(['Mon', 'Wed', 'Fri']);
+// ApexCharts' heatmap renders series bottom-up (the last array entry ends up
+// on top), the opposite of the Sun-first order the calendar is built in. This
+// reverses the row order fed to the chart so Sunday still lands on top.
+const ROW_ORDER = [6, 5, 4, 3, 2, 1, 0];
+const MONTH_LABELS = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+];
+// Fixed row height for the calendar heatmap (always 7 weekday rows) plus
+// room for the sparse month labels along the top - unlike the other bar
+// charts, this doesn't scale with row count since rows are always 7.
+const CALENDAR_ROW_HEIGHT = 20;
+const CALENDAR_CHART_CHROME = 30;
+// ACCENT_COLOR (#3987e5) as an r,g,b triple, for the heatmap's alpha-graduated color scale.
+const ACCENT_RGB = '57, 135, 229';
+// The 5-step "Less -> More" scale, shared by the heatmap's colorScale ranges
+// and its legend swatches so the two can never drift out of sync.
+const HEATMAP_LEVEL_COLORS = [
+  CHART_GRID_COLOR,
+  `rgba(${ACCENT_RGB}, 0.35)`,
+  `rgba(${ACCENT_RGB}, 0.6)`,
+  `rgba(${ACCENT_RGB}, 0.8)`,
+  ACCENT_COLOR,
+];
+// Matches the page background (bg-gray-950), a shade darker than
+// CHART_GRID_COLOR above. Using the same color for both the "no activity"
+// cell fill and the gap between cells made every empty cell blend into one
+// solid mass with no visible boundary - this keeps the gap visibly darker.
+const HEATMAP_GAP_COLOR = '#030712';
 
 const BASE_CHART: Partial<ApexChart> = {
   background: 'transparent',
@@ -321,6 +362,154 @@ export class Dashboard {
     markers: { size: 6 },
   };
 
+  protected readonly activityView = signal<'bar' | 'heatmap'>('bar');
+
+  protected setActivityView(view: 'bar' | 'heatmap'): void {
+    this.activityView.set(view);
+  }
+
+  /**
+   * A GitHub-style contribution calendar: 7 weekday rows x one column per
+   * week, spanning the selected date-range filter. Weeks are padded out to
+   * full Sun-Sat columns so the grid lines up, with padding days outside the
+   * actual range simply left at 0 (visually identical to a real 0-commit day).
+   */
+  private readonly activityCalendar = computed(() => {
+    const dayCounts = new Map<string, number>();
+    for (const commit of this.filteredCommits()) {
+      const key = localDateKey(new Date(commit.committedAt));
+      dayCounts.set(key, (dayCounts.get(key) ?? 0) + 1);
+    }
+
+    const end = new Date();
+    end.setHours(0, 0, 0, 0);
+    const start = new Date(end);
+    start.setDate(start.getDate() - RANGE_DAYS[this.dateRangeKey()] + 1);
+
+    const gridStart = new Date(start);
+    gridStart.setDate(gridStart.getDate() - gridStart.getDay());
+
+    const totalDays = Math.round((end.getTime() - gridStart.getTime()) / 86_400_000) + 1;
+    const weekCount = Math.ceil(totalDays / 7);
+
+    const counts: number[][] = Array.from({ length: 7 }, () => new Array(weekCount).fill(0));
+    const dates: string[][] = Array.from({ length: 7 }, () => new Array(weekCount).fill(''));
+    const weekLabels: string[] = new Array(weekCount).fill('');
+
+    const cursor = new Date(gridStart);
+    let lastMonth = -1;
+    for (let week = 0; week < weekCount; week++) {
+      for (let day = 0; day < 7; day++) {
+        if (cursor >= start && cursor <= end) {
+          const key = localDateKey(cursor);
+          counts[day][week] = dayCounts.get(key) ?? 0;
+          dates[day][week] = key;
+        }
+        if (day === 0 && cursor.getMonth() !== lastMonth) {
+          weekLabels[week] = MONTH_LABELS[cursor.getMonth()];
+          lastMonth = cursor.getMonth();
+        }
+        cursor.setDate(cursor.getDate() + 1);
+      }
+    }
+
+    const series = ROW_ORDER.map((day) => ({ name: WEEKDAY_LABELS[day], data: counts[day] }));
+    const orderedDates = ROW_ORDER.map((day) => dates[day]);
+    return { series, categories: weekLabels, dates: orderedDates };
+  });
+
+  protected readonly activityHeatmapSeries = computed<ApexAxisChartSeries>(
+    () => this.activityCalendar().series,
+  );
+  protected readonly activityHeatmapXaxis = computed<ApexXAxis>(() => ({
+    categories: this.activityCalendar().categories,
+    labels: { style: AXIS_LABEL_STYLE },
+    axisBorder: { show: false },
+    axisTicks: { show: false },
+  }));
+  // Every other chart on this page styles its xaxis labels explicitly; the
+  // heatmap's row labels (Sun/Mon/... on the y-axis) need the same treatment,
+  // otherwise they fall back to ApexCharts' default label color, which is
+  // invisible against this dark theme. The formatter (see VISIBLE_WEEKDAYS
+  // above) is what actually keeps Mon/Wed/Fri showing regardless of height.
+  protected readonly activityHeatmapYaxis = {
+    labels: {
+      show: true,
+      style: AXIS_LABEL_STYLE,
+      // ApexCharts' types declare this formatter as (val: number) => string,
+      // modeling the common numeric-yaxis case. For a heatmap the y-axis is
+      // categorical and ApexCharts actually calls this with the row's
+      // category string (e.g. 'Mon') at runtime - the cast bridges that gap
+      // in the type declarations rather than a real type mismatch.
+      formatter: (val: number) => {
+        const label = val as unknown as string;
+        return VISIBLE_WEEKDAYS.has(label) ? label : '';
+      },
+    },
+  };
+  protected readonly activityHeatmapChart: ApexChart = {
+    ...BASE_CHART,
+    type: 'heatmap',
+    height: 7 * CALENDAR_ROW_HEIGHT + CALENDAR_CHART_CHROME,
+    animations: { enabled: false },
+  };
+  // ApexCharts' default heatmap shading lightens the base color toward white
+  // for low values, which reads as a stray pale/white box on this dark theme.
+  // Explicit ranges pin the zero-activity color to the card's own grid color
+  // instead, then ramp accent-color opacity up through the rest of the scale.
+  // `enableShades: false` is required too - it defaults to true and otherwise
+  // re-lightens even these explicit range colors based on value position.
+  protected readonly activityHeatmapPlotOptions = computed(() => {
+    const values = this.activityCalendar().series.flatMap((series) => series.data);
+    const max = Math.max(0, ...values);
+    const step = Math.max(1, Math.ceil(max / 4));
+    return {
+      heatmap: {
+        radius: 4,
+        enableShades: false,
+        colorScale: {
+          ranges: [
+            { from: 0, to: 0, color: HEATMAP_LEVEL_COLORS[0], name: 'No activity' },
+            { from: 1, to: step, color: HEATMAP_LEVEL_COLORS[1], name: 'Low' },
+            { from: step + 1, to: step * 2, color: HEATMAP_LEVEL_COLORS[2], name: 'Medium' },
+            { from: step * 2 + 1, to: step * 3, color: HEATMAP_LEVEL_COLORS[3], name: 'High' },
+            { from: step * 3 + 1, to: Math.max(max, step * 4), color: HEATMAP_LEVEL_COLORS[4], name: 'Very high' },
+          ],
+        },
+      },
+    };
+  });
+  protected readonly activityHeatmapColors = [ACCENT_COLOR];
+  // Matches the page background - deliberately darker than the "no activity"
+  // cell fill (HEATMAP_LEVEL_COLORS[0]) so the gap is visible between cells
+  // even when neighboring cells both have zero activity.
+  protected readonly activityHeatmapStroke = { show: true, colors: [HEATMAP_GAP_COLOR], width: 4 };
+  // Default heatmap hover state lightens the cell (toward white), which reads
+  // as a stray flash against this dark theme - the tooltip already surfaces
+  // the value on hover, so the highlight itself is turned off.
+  protected readonly activityHeatmapStates = { hover: { filter: { type: 'none' as const } } };
+  protected readonly activityHeatmapLegend = HEATMAP_LEVEL_COLORS;
+  protected readonly activityHeatmapTooltip = computed(() => {
+    const { dates } = this.activityCalendar();
+    return {
+      theme: 'dark' as const,
+      custom: ({ series, seriesIndex, dataPointIndex }: ApexTooltipCustomOpts) => {
+        const value = series[seriesIndex][dataPointIndex];
+        const iso = dates[seriesIndex][dataPointIndex];
+        const dateLabel = iso
+          ? new Date(`${iso}T00:00:00`).toLocaleDateString(undefined, {
+              weekday: 'short',
+              month: 'short',
+              day: 'numeric',
+              year: 'numeric',
+            })
+          : '';
+        const contributionLabel = `${value} contribution${value === 1 ? '' : 's'}`;
+        return `<div class="px-2 py-1.5 text-xs">${contributionLabel}${dateLabel ? ` on ${dateLabel}` : ''}</div>`;
+      },
+    };
+  });
+
   protected readonly repoChartSeries = computed<ApexAxisChartSeries>(
     () => this.repoStack().series,
   );
@@ -374,8 +563,14 @@ export class Dashboard {
     },
   };
   protected readonly noDataLabels = { enabled: false };
+  protected readonly insideBarDataLabels = {
+    enabled: true,
+    style: { fontSize: '11px', colors: ['#fff'] },
+    dropShadow: { enabled: false },
+  };
   protected readonly chartGrid = { borderColor: CHART_GRID_COLOR, strokeDashArray: 3 };
   protected readonly stackedTooltip = { theme: 'dark' as const, shared: true, intersect: false };
+  protected readonly noTooltip = { enabled: false };
 
   protected setDateRange(key: string): void {
     this.dateRangeKey.set(key as DateRangeKey);
