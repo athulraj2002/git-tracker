@@ -22,6 +22,12 @@ this document describes what actually exists in the codebase today.
 - Validation + Types: **Zod (shared schemas)**
 - Charts: **ApexCharts** (via `ng-apexcharts`)
 - Auth: OAuth (GitHub, GitLab, Bitbucket) issuing our own JWT
+- Front-end response cache: an in-memory `HttpInterceptor` (`HttpCacheService`)
+  caches GET responses for a short TTL, keyed by full URL, and clears on any
+  mutation or logout — cuts down on duplicate fetches (e.g. `GET
+  /repos/tracked` firing again every time the router recreates a sidenav
+  page). This is separate from — and doesn't replace — the backend-side
+  GitHub response cache still on the roadmap (see Not yet implemented).
 
 ### Not yet implemented (see Future Enhancements)
 
@@ -37,11 +43,15 @@ they're aspirational, not partially-built.
 apps/
   front-end/                 (Angular app)
     src/app/
-      common/data.ts         (shared static data: colors, date-range options)
+      common/
+        data.ts               (shared static data: colors, date-range options)
+        chart-config.ts        (dashboard's static ApexCharts config: base
+                                chart/axis styles, stacked-bar-chart config,
+                                calendar-heatmap layout and color scale)
       core/
-        services/            (AuthService, ReposService)
+        services/            (AuthService, ReposService, HttpCacheService)
         guards/               (authGuard, hasTrackedReposGuard)
-        interceptors/         (authInterceptor)
+        interceptors/         (authInterceptor, cacheInterceptor)
         auth.storage.ts
       layout/app-shell/      (sidenav + topbar shell for authenticated routes)
       pages/
@@ -62,7 +72,9 @@ libs/
     zod-schemas/             (source of truth for API contracts)
     types/                    (zod-inferred types + hand-written shared FE types)
     helpers/                  (framework-agnostic pure helper functions)
-  ui/                         (shared Angular UI components)
+  ui/                         (shared Angular UI components: Button,
+                                ButtonGroup, Checkbox, InputField, RadioGroup,
+                                Select, Skeleton, Spinner)
 ```
 
 Note: the original plan called for separate `libs/github`, `libs/analytics`,
@@ -103,6 +115,24 @@ contracts:
 - Backend feature modules live in `apps/api/src/app/modules/<name>/`
   (controller + service + module + anything module-private); cross-cutting
   pieces (validation pipes, etc.) stay in `apps/api/src/app/common/`.
+- Static, non-reactive chart config (colors, sizes, ApexCharts option
+  objects) lives in `apps/front-end/src/app/common/`, not inlined in the
+  component - `dashboard.ts` imports its chart config from
+  `common/chart-config.ts` rather than declaring it as module-level consts.
+
+### `libs/ui` component conventions
+
+- `InputField`, `Checkbox`, and `RadioGroup` implement Angular Signal Forms'
+  `FormValueControl`/`FormCheckboxControl` (label, hint, required, invalid,
+  touched, errors) - these are real, validated form fields.
+- `ButtonGroup` and `Select` are deliberately simpler: an `options` input
+  plus a two-way `value` model, no validation trappings. They're for
+  unvalidated UI state (view toggles, filter dropdowns), not form fields -
+  don't upgrade them to `FormValueControl` unless an actual form needs one.
+- A component's own `class` input (see `Button`) is how a consumer appends
+  extra Tailwind classes; bind it with `[class]="'...'"` (property binding),
+  not a plain `class="..."` attribute, since a component input named `class`
+  only receives bound values, not static attribute text.
 
 ---
 
@@ -149,7 +179,12 @@ nothing is pre-computed or persisted server-side):
 - **Total contributions** — commit count for the selected date range / repo
   / contributor filter combination
 - **Contributions over time** — bucketed by day, week, or month depending on
-  the selected range, stacked by contributor
+  the selected range, stacked by contributor. Has a **Bars / Heatmap**
+  toggle: the heatmap is a GitHub-style contribution calendar (7 weekday
+  rows x one column per week) that always spans a full year regardless of
+  the selected filter, with days outside the current filter shown in a
+  distinct dimmed "disabled" state rather than looking like a real 0-commit
+  day.
 - **Contributions by repo** — stacked by contributor
 - **Top contributors** — stacked by repo
 
@@ -176,7 +211,10 @@ yet, only commit data fetched on demand.
   selection, persisted in `tracked_repos`
 - `GET /repos/tracked/:id` — one tracked repo + its 10 most recent commits
 - `GET /repos/commits?since=` — commits aggregated across every tracked
-  repo in parallel (a single repo failing doesn't fail the whole request)
+  repo in parallel (a single repo failing doesn't fail the whole request).
+  `since` is a plain date (`YYYY-MM-DD`, not a full datetime) — the frontend
+  deliberately keeps it stable to the day so the response cache (see Tech
+  Stack) actually gets hit on repeat visits within the same day.
 
 ### Backend: Database Module (`apps/api/src/app/modules/database`)
 
@@ -188,8 +226,9 @@ yet, only commit data fetched on demand.
 - `login` / `auth-callback` — OAuth sign-in
 - `select-repos` — first-run onboarding gate (redirected here until at
   least one repo is tracked)
-- `dashboard` — stat tiles + filter bar (date range / repo / contributor) +
-  three stacked ApexCharts
+- `dashboard` — stat tiles + filter bar (date range / repo / contributor,
+  using `lib-ui-select`) + three stacked ApexCharts; the contribution
+  activity chart has a Bars/Heatmap toggle (`lib-ui-button-group`)
 - `repos-list` / `repo-detail` — tracked repos and their recent commits
 - `settings` — profile info, connected accounts, manage tracked repos
 
@@ -222,7 +261,7 @@ yet, only commit data fetched on demand.
 
 - ✅ Angular dashboard with sidenav shell
 - ✅ Charts (ApexCharts, stacked bar charts) + filter bar
-- [ ] Heatmap (not built)
+- ✅ Heatmap (GitHub-style contribution calendar, toggled per-chart)
 
 ### Phase 5 – Advanced Metrics
 
@@ -259,6 +298,17 @@ yet, only commit data fetched on demand.
    in `modules/<name>/`.
 7. Follow Nx module boundaries — no reaching into another app's `src`
    directly; go through a shared lib.
+8. Angular component class members are grouped by *kind*, not feature area:
+   all readonly variables first (state `signal()`s, `linkedSignal()`s,
+   resources, plain config references — anything that isn't a `computed()`
+   call), then every `computed()`, then methods (helpers, then action/setter
+   methods). Don't interleave a plain signal after a `computed()`.
+9. When a change touches Angular template bindings against a typed
+   third-party library (e.g. `ng-apexcharts`), verify with a real `nx build`
+   (or `nx serve`), not just `nx typecheck` — `tsc --emitDeclarationOnly`
+   skips Angular's template type-checking, so it can pass clean on a binding
+   the real build compiler rejects, and the dev server silently keeps
+   serving the last good build with no visible error.
 
 ---
 
@@ -288,7 +338,8 @@ yet, only commit data fetched on demand.
 - ✅ Layout (sidenav shell)
 - ✅ Filter bar (date range / repo / contributor)
 - ✅ Charts (ApexCharts, stacked)
-- [ ] Heatmap
+- ✅ Heatmap
+- ✅ Front-end response cache (short-TTL, cleared on mutation/logout)
 
 ### 🔹 AI — not started
 
