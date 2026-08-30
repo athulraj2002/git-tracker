@@ -2,7 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { ChartComponent, type ApexAxisChartSeries, type ApexChart, type ApexXAxis } from 'ng-apexcharts';
 import type { ApexTooltipCustomOpts } from 'apexcharts';
-import { Skeleton } from '@org/ui';
+import { ButtonGroup, Skeleton, type ButtonGroupOption } from '@org/ui';
 import type {
   ActivitySeries,
   ContributorStat,
@@ -11,97 +11,92 @@ import type {
   RepoContribution,
 } from '@org/types';
 import { bucketFor, extractErrorMessage, granularityFor, localDateKey } from '@org/helpers';
+import { CATEGORICAL_COLORS, DATE_RANGE_OPTIONS, OTHER_COLOR, OTHER_LABEL, RANGE_DAYS } from '../../common/data';
 import {
-  ACCENT_COLOR,
-  CATEGORICAL_COLORS,
-  CHART_FORE_COLOR,
-  CHART_GRID_COLOR,
-  CHART_LABEL_COLOR,
-  DATE_RANGE_OPTIONS,
-  OTHER_COLOR,
-  OTHER_LABEL,
-  RANGE_DAYS,
-} from '../../common/data';
+  ACTIVITY_CHART,
+  ACTIVITY_HEATMAP_CHART,
+  ACTIVITY_HEATMAP_COLORS,
+  ACTIVITY_HEATMAP_STATES,
+  ACTIVITY_HEATMAP_STROKE,
+  ACTIVITY_HEATMAP_YAXIS,
+  ACTIVITY_PLOT_OPTIONS,
+  AXIS_LABEL_STYLE,
+  BAR_CHART_CHROME,
+  BAR_ROW_HEIGHT,
+  BASE_CHART,
+  CHART_GRID,
+  DISABLED_VALUE,
+  HEATMAP_DISABLED_COLOR,
+  HEATMAP_LEVEL_COLORS,
+  HORIZONTAL_PLOT_OPTIONS,
+  INSIDE_BAR_DATA_LABELS,
+  MAX_STACK_SERIES,
+  MONTH_LABELS,
+  NO_DATA_LABELS,
+  NO_TOOLTIP,
+  ROW_ORDER,
+  STACKED_LEGEND,
+  STACKED_TOOLTIP,
+  WEEKDAY_LABELS,
+  YEAR_DAYS,
+} from '../../common/chart-config';
 import { ReposService } from '../../core/services/repos.service';
-
-const MAX_STACK_SERIES = 7;
-
-// Keeps horizontal bars a constant thickness regardless of how many rows
-// there are, instead of stretching a single bar to fill a tall chart.
-const BAR_ROW_HEIGHT = 40;
-// Measured against the rendered chart: legend (fixed 30px) + x-axis labels +
-// the padding ApexCharts reserves around the plot area. Getting this wrong
-// starves a single-row chart's one bar of nearly all its slot, since that
-// deficit doesn't scale down with fewer rows the way BAR_ROW_HEIGHT does.
-const BAR_CHART_CHROME = 96;
 
 const UNKNOWN_AUTHOR = '__unknown__';
 const TOP_REPO_COUNT = 8;
 const TOP_CONTRIBUTOR_COUNT = 6;
 
-// Indexed Sun=0..Sat=6.
-const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-// GitHub's own calendar only labels every other weekday to avoid crowding the
-// axis. This has to go through yaxis.labels.formatter rather than just
-// blanking the unwanted series names: ApexCharts auto-thins heatmap row
-// labels to whatever fits the chart's pixel height, by array position, and
-// that thinning would just as easily strip out Mon/Wed/Fri as the blanks
-// depending on how many rows fit - a user-supplied formatter is the
-// documented way to opt out of that auto-thinning entirely.
-const VISIBLE_WEEKDAYS = new Set(['Mon', 'Wed', 'Fri']);
-// ApexCharts' heatmap renders series bottom-up (the last array entry ends up
-// on top), the opposite of the Sun-first order the calendar is built in. This
-// reverses the row order fed to the chart so Sunday still lands on top.
-const ROW_ORDER = [6, 5, 4, 3, 2, 1, 0];
-const MONTH_LABELS = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-];
-// Fixed row height for the calendar heatmap (always 7 weekday rows) plus
-// room for the sparse month labels along the top - unlike the other bar
-// charts, this doesn't scale with row count since rows are always 7.
-const CALENDAR_ROW_HEIGHT = 20;
-const CALENDAR_CHART_CHROME = 30;
-// ACCENT_COLOR (#3987e5) as an r,g,b triple, for the heatmap's alpha-graduated color scale.
-const ACCENT_RGB = '57, 135, 229';
-// The 5-step "Less -> More" scale, shared by the heatmap's colorScale ranges
-// and its legend swatches so the two can never drift out of sync.
-const HEATMAP_LEVEL_COLORS = [
-  CHART_GRID_COLOR,
-  `rgba(${ACCENT_RGB}, 0.35)`,
-  `rgba(${ACCENT_RGB}, 0.6)`,
-  `rgba(${ACCENT_RGB}, 0.8)`,
-  ACCENT_COLOR,
-];
-// Matches the page background (bg-gray-950), a shade darker than
-// CHART_GRID_COLOR above. Using the same color for both the "no activity"
-// cell fill and the gap between cells made every empty cell blend into one
-// solid mass with no visible boundary - this keeps the gap visibly darker.
-const HEATMAP_GAP_COLOR = '#030712';
-
-const BASE_CHART: Partial<ApexChart> = {
-  background: 'transparent',
-  foreColor: CHART_FORE_COLOR,
-  fontFamily: 'inherit',
-  toolbar: { show: false },
-};
-
-const AXIS_LABEL_STYLE = { colors: CHART_LABEL_COLOR, fontSize: '11px' };
-
 @Component({
   selector: 'app-dashboard',
-  imports: [RouterLink, Skeleton, ChartComponent],
+  imports: [RouterLink, Skeleton, ChartComponent, ButtonGroup],
   templateUrl: './dashboard.html',
 })
 export class Dashboard {
+  // ---------------------------------------------------------------------
+  // Readonly variables
+  // ---------------------------------------------------------------------
+
   private readonly reposService = inject(ReposService);
   private readonly router = inject(Router);
 
   protected readonly dateRangeOptions = DATE_RANGE_OPTIONS;
   protected readonly unknownAuthor = UNKNOWN_AUTHOR;
-
   protected readonly dateRangeKey = signal<DateRangeKey>('30d');
   protected readonly selectedRepoId = signal<string>('all');
   protected readonly selectedAuthor = signal<string>('all');
+  protected readonly activityView = signal<'bar' | 'heatmap'>('bar');
+  protected readonly activityViewOptions: ButtonGroupOption[] = [
+    { value: 'bar', label: 'Bars' },
+    { value: 'heatmap', label: 'Heatmap' },
+  ];
+
+  private readonly reposResource = this.reposService.trackedRepos();
+  private readonly commitsResource = this.reposService.contributionActivity(
+    () => this.since(),
+  );
+  protected readonly repos = this.reposResource.value;
+
+  protected readonly activityChart = ACTIVITY_CHART;
+  protected readonly activityPlotOptions = ACTIVITY_PLOT_OPTIONS;
+  protected readonly stackedLegend = STACKED_LEGEND;
+
+  protected readonly activityHeatmapYaxis = ACTIVITY_HEATMAP_YAXIS;
+  protected readonly activityHeatmapChart = ACTIVITY_HEATMAP_CHART;
+  protected readonly activityHeatmapColors = ACTIVITY_HEATMAP_COLORS;
+  protected readonly activityHeatmapStroke = ACTIVITY_HEATMAP_STROKE;
+  protected readonly activityHeatmapStates = ACTIVITY_HEATMAP_STATES;
+  protected readonly activityHeatmapLegend = HEATMAP_LEVEL_COLORS;
+
+  protected readonly horizontalPlotOptions = HORIZONTAL_PLOT_OPTIONS;
+  protected readonly noDataLabels = NO_DATA_LABELS;
+  protected readonly insideBarDataLabels = INSIDE_BAR_DATA_LABELS;
+  protected readonly chartGrid = CHART_GRID;
+  protected readonly stackedTooltip = STACKED_TOOLTIP;
+  protected readonly noTooltip = NO_TOOLTIP;
+
+  // ---------------------------------------------------------------------
+  // Computed signals
+  // ---------------------------------------------------------------------
 
   private readonly since = computed(() => {
     const date = new Date();
@@ -114,12 +109,6 @@ export class Dashboard {
     return date.toISOString().slice(0, 10);
   });
 
-  private readonly reposResource = this.reposService.trackedRepos();
-  private readonly commitsResource = this.reposService.contributionActivity(
-    () => this.since(),
-  );
-
-  protected readonly repos = this.reposResource.value;
   protected readonly isLoading = computed(
     () => this.reposResource.status() === 'loading',
   );
@@ -177,39 +166,6 @@ export class Dashboard {
   });
 
   protected readonly totalContributions = computed(() => this.filteredCommits().length);
-
-  /**
-   * Ranks the secondary-dimension keys by total, caps at MAX_STACK_SERIES,
-   * folds the rest into an "Other" series, and assigns the validated
-   * categorical color order. Shared by every stacked chart on this page.
-   */
-  private buildStackedSeries(
-    categoryKeys: string[],
-    secondaryTotals: Map<string, number>,
-    grid: Map<string, Map<string, number>>,
-  ): { series: ActivitySeries[]; colors: string[] } {
-    const ranked = [...secondaryTotals.entries()].sort((a, b) => b[1] - a[1]);
-    const top = ranked.slice(0, MAX_STACK_SERIES).map(([key]) => key);
-    const overflow = ranked.slice(MAX_STACK_SERIES).map(([key]) => key);
-
-    const series: ActivitySeries[] = top.map((key) => ({
-      name: key,
-      data: categoryKeys.map((categoryKey) => grid.get(key)?.get(categoryKey) ?? 0),
-    }));
-    const colors = top.map((_, index) => CATEGORICAL_COLORS[index % CATEGORICAL_COLORS.length]);
-
-    if (overflow.length > 0) {
-      series.push({
-        name: OTHER_LABEL,
-        data: categoryKeys.map((categoryKey) =>
-          overflow.reduce((sum, key) => sum + (grid.get(key)?.get(categoryKey) ?? 0), 0),
-        ),
-      });
-      colors.push(OTHER_COLOR);
-    }
-
-    return { series, colors };
-  }
 
   private readonly activityStack = computed(() => {
     const granularity = granularityFor(this.dateRangeKey());
@@ -343,41 +299,14 @@ export class Dashboard {
   protected readonly activityChartColors = computed<string[]>(
     () => this.activityStack().colors,
   );
-  protected readonly activityChart: ApexChart = {
-    ...BASE_CHART,
-    type: 'bar',
-    height: 280,
-    stacked: true,
-  };
-  protected readonly activityPlotOptions = {
-    bar: { borderRadius: 4, borderRadiusApplication: 'end' as const, columnWidth: '55%' },
-  };
-  protected readonly stackedLegend = {
-    show: true,
-    // Without this, ApexCharts hides the legend entirely for a single-series
-    // chart, which frees up extra vertical space and makes that chart's bars
-    // render thicker than an otherwise-identical multi-series chart at the
-    // same height. Forcing it on (and to a fixed height) keeps every stacked
-    // chart's legend footprint - and therefore its bar thickness - constant.
-    showForSingleSeries: true,
-    height: 30,
-    position: 'bottom' as const,
-    fontSize: '11px',
-    labels: { colors: CHART_FORE_COLOR },
-    markers: { size: 6 },
-  };
-
-  protected readonly activityView = signal<'bar' | 'heatmap'>('bar');
-
-  protected setActivityView(view: 'bar' | 'heatmap'): void {
-    this.activityView.set(view);
-  }
 
   /**
    * A GitHub-style contribution calendar: 7 weekday rows x one column per
-   * week, spanning the selected date-range filter. Weeks are padded out to
-   * full Sun-Sat columns so the grid lines up, with padding days outside the
-   * actual range simply left at 0 (visually identical to a real 0-commit day).
+   * week, always spanning a full year regardless of the selected date-range
+   * filter, so the grid's shape stays constant. Days outside the selected
+   * filter (and any not-yet-happened days padding out the final week) are
+   * marked DISABLED_VALUE instead of a real count, so they render as a
+   * distinct dimmed state rather than looking like a real 0-commit day.
    */
   private readonly activityCalendar = computed(() => {
     const dayCounts = new Map<string, number>();
@@ -388,16 +317,21 @@ export class Dashboard {
 
     const end = new Date();
     end.setHours(0, 0, 0, 0);
-    const start = new Date(end);
-    start.setDate(start.getDate() - RANGE_DAYS[this.dateRangeKey()] + 1);
+    const rangeStart = new Date(end);
+    rangeStart.setDate(rangeStart.getDate() - RANGE_DAYS[this.dateRangeKey()] + 1);
 
-    const gridStart = new Date(start);
+    const yearStart = new Date(end);
+    yearStart.setDate(yearStart.getDate() - YEAR_DAYS + 1);
+
+    const gridStart = new Date(yearStart);
     gridStart.setDate(gridStart.getDate() - gridStart.getDay());
 
     const totalDays = Math.round((end.getTime() - gridStart.getTime()) / 86_400_000) + 1;
     const weekCount = Math.ceil(totalDays / 7);
 
-    const counts: number[][] = Array.from({ length: 7 }, () => new Array(weekCount).fill(0));
+    const counts: number[][] = Array.from({ length: 7 }, () =>
+      new Array(weekCount).fill(DISABLED_VALUE),
+    );
     const dates: string[][] = Array.from({ length: 7 }, () => new Array(weekCount).fill(''));
     const weekLabels: string[] = new Array(weekCount).fill('');
 
@@ -405,10 +339,10 @@ export class Dashboard {
     let lastMonth = -1;
     for (let week = 0; week < weekCount; week++) {
       for (let day = 0; day < 7; day++) {
-        if (cursor >= start && cursor <= end) {
+        if (cursor <= end) {
           const key = localDateKey(cursor);
-          counts[day][week] = dayCounts.get(key) ?? 0;
           dates[day][week] = key;
+          counts[day][week] = cursor >= rangeStart ? (dayCounts.get(key) ?? 0) : DISABLED_VALUE;
         }
         if (day === 0 && cursor.getMonth() !== lastMonth) {
           weekLabels[week] = MONTH_LABELS[cursor.getMonth()];
@@ -432,32 +366,6 @@ export class Dashboard {
     axisBorder: { show: false },
     axisTicks: { show: false },
   }));
-  // Every other chart on this page styles its xaxis labels explicitly; the
-  // heatmap's row labels (Sun/Mon/... on the y-axis) need the same treatment,
-  // otherwise they fall back to ApexCharts' default label color, which is
-  // invisible against this dark theme. The formatter (see VISIBLE_WEEKDAYS
-  // above) is what actually keeps Mon/Wed/Fri showing regardless of height.
-  protected readonly activityHeatmapYaxis = {
-    labels: {
-      show: true,
-      style: AXIS_LABEL_STYLE,
-      // ApexCharts' types declare this formatter as (val: number) => string,
-      // modeling the common numeric-yaxis case. For a heatmap the y-axis is
-      // categorical and ApexCharts actually calls this with the row's
-      // category string (e.g. 'Mon') at runtime - the cast bridges that gap
-      // in the type declarations rather than a real type mismatch.
-      formatter: (val: number) => {
-        const label = val as unknown as string;
-        return VISIBLE_WEEKDAYS.has(label) ? label : '';
-      },
-    },
-  };
-  protected readonly activityHeatmapChart: ApexChart = {
-    ...BASE_CHART,
-    type: 'heatmap',
-    height: 7 * CALENDAR_ROW_HEIGHT + CALENDAR_CHART_CHROME,
-    animations: { enabled: false },
-  };
   // ApexCharts' default heatmap shading lightens the base color toward white
   // for low values, which reads as a stray pale/white box on this dark theme.
   // Explicit ranges pin the zero-activity color to the card's own grid color
@@ -474,6 +382,12 @@ export class Dashboard {
         enableShades: false,
         colorScale: {
           ranges: [
+            {
+              from: DISABLED_VALUE,
+              to: DISABLED_VALUE,
+              color: HEATMAP_DISABLED_COLOR,
+              name: 'Outside selected range',
+            },
             { from: 0, to: 0, color: HEATMAP_LEVEL_COLORS[0], name: 'No activity' },
             { from: 1, to: step, color: HEATMAP_LEVEL_COLORS[1], name: 'Low' },
             { from: step + 1, to: step * 2, color: HEATMAP_LEVEL_COLORS[2], name: 'Medium' },
@@ -484,16 +398,6 @@ export class Dashboard {
       },
     };
   });
-  protected readonly activityHeatmapColors = [ACCENT_COLOR];
-  // Matches the page background - deliberately darker than the "no activity"
-  // cell fill (HEATMAP_LEVEL_COLORS[0]) so the gap is visible between cells
-  // even when neighboring cells both have zero activity.
-  protected readonly activityHeatmapStroke = { show: true, colors: [HEATMAP_GAP_COLOR], width: 4 };
-  // Default heatmap hover state lightens the cell (toward white), which reads
-  // as a stray flash against this dark theme - the tooltip already surfaces
-  // the value on hover, so the highlight itself is turned off.
-  protected readonly activityHeatmapStates = { hover: { filter: { type: 'none' as const } } };
-  protected readonly activityHeatmapLegend = HEATMAP_LEVEL_COLORS;
   protected readonly activityHeatmapTooltip = computed(() => {
     const { dates } = this.activityCalendar();
     return {
@@ -509,8 +413,11 @@ export class Dashboard {
               year: 'numeric',
             })
           : '';
-        const contributionLabel = `${value} contribution${value === 1 ? '' : 's'}`;
-        return `<div class="px-2 py-1.5 text-xs">${contributionLabel}${dateLabel ? ` on ${dateLabel}` : ''}</div>`;
+        const body =
+          value === DISABLED_VALUE
+            ? `Outside the selected range${dateLabel ? ` (${dateLabel})` : ''}`
+            : `${value} contribution${value === 1 ? '' : 's'}${dateLabel ? ` on ${dateLabel}` : ''}`;
+        return `<div class="px-2 py-1.5 text-xs">${body}</div>`;
       },
     };
   });
@@ -559,23 +466,46 @@ export class Dashboard {
     stacked: true,
   }));
 
-  protected readonly horizontalPlotOptions = {
-    bar: {
-      horizontal: true,
-      borderRadius: 4,
-      borderRadiusApplication: 'end' as const,
-      barHeight: '55%',
-    },
-  };
-  protected readonly noDataLabels = { enabled: false };
-  protected readonly insideBarDataLabels = {
-    enabled: true,
-    style: { fontSize: '11px', colors: ['#fff'] },
-    dropShadow: { enabled: false },
-  };
-  protected readonly chartGrid = { borderColor: CHART_GRID_COLOR, strokeDashArray: 3 };
-  protected readonly stackedTooltip = { theme: 'dark' as const, shared: true, intersect: false };
-  protected readonly noTooltip = { enabled: false };
+  // ---------------------------------------------------------------------
+  // Private functions
+  // ---------------------------------------------------------------------
+
+  /**
+   * Ranks the secondary-dimension keys by total, caps at MAX_STACK_SERIES,
+   * folds the rest into an "Other" series, and assigns the validated
+   * categorical color order. Shared by every stacked chart on this page.
+   */
+  private buildStackedSeries(
+    categoryKeys: string[],
+    secondaryTotals: Map<string, number>,
+    grid: Map<string, Map<string, number>>,
+  ): { series: ActivitySeries[]; colors: string[] } {
+    const ranked = [...secondaryTotals.entries()].sort((a, b) => b[1] - a[1]);
+    const top = ranked.slice(0, MAX_STACK_SERIES).map(([key]) => key);
+    const overflow = ranked.slice(MAX_STACK_SERIES).map(([key]) => key);
+
+    const series: ActivitySeries[] = top.map((key) => ({
+      name: key,
+      data: categoryKeys.map((categoryKey) => grid.get(key)?.get(categoryKey) ?? 0),
+    }));
+    const colors = top.map((_, index) => CATEGORICAL_COLORS[index % CATEGORICAL_COLORS.length]);
+
+    if (overflow.length > 0) {
+      series.push({
+        name: OTHER_LABEL,
+        data: categoryKeys.map((categoryKey) =>
+          overflow.reduce((sum, key) => sum + (grid.get(key)?.get(categoryKey) ?? 0), 0),
+        ),
+      });
+      colors.push(OTHER_COLOR);
+    }
+
+    return { series, colors };
+  }
+
+  protected setActivityView(view: 'bar' | 'heatmap'): void {
+    this.activityView.set(view);
+  }
 
   protected setDateRange(key: string): void {
     this.dateRangeKey.set(key as DateRangeKey);

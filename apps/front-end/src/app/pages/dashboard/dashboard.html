@@ -1,4 +1,4 @@
-<div class="px-8 py-8 flex flex-col gap-8">
+<div class="px-4 py-4 flex flex-col gap-4">
   <div>
     <h1 class="text-xl font-semibold text-white">Dashboard</h1>
     <p class="text-sm text-gray-500">
@@ -7,257 +7,250 @@
   </div>
 
   @if (errorMessage()) {
-    <p class="text-sm text-red-500">{{ errorMessage() }}</p>
-  }
-
-  @if (isLoading()) {
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-      @for (i of [0, 1, 2, 3]; track i) {
-        <div class="rounded-lg border border-gray-800 bg-gray-900/40 p-4">
-          <lib-ui-skeleton class="h-3 w-20" />
-          <lib-ui-skeleton class="h-7 w-14 mt-2" />
-        </div>
-      }
+  <p class="text-sm text-red-500">{{ errorMessage() }}</p>
+  } @if (isLoading()) {
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+    @for (i of [0, 1, 2, 3]; track i) {
+    <div class="rounded-lg border border-gray-800 bg-gray-900/40 p-4">
+      <lib-ui-skeleton class="h-3 w-20" />
+      <lib-ui-skeleton class="h-7 w-14 mt-2" />
     </div>
+    }
+  </div>
   } @else if (totalRepos() === 0) {
-    <div
-      class="rounded-lg border border-gray-800 px-4 py-10 text-center flex flex-col items-center gap-3"
+  <div
+    class="rounded-lg border border-gray-800 px-4 py-10 text-center flex flex-col items-center gap-3"
+  >
+    <p class="text-sm text-gray-500">
+      You're not tracking any repositories yet.
+    </p>
+    <a
+      routerLink="/settings"
+      class="text-sm text-white font-medium hover:underline"
+      >Add repositories to track</a
     >
-      <p class="text-sm text-gray-500">
-        You're not tracking any repositories yet.
-      </p>
-      <a
-        routerLink="/settings"
-        class="text-sm text-white font-medium hover:underline"
-        >Add repositories to track</a
-      >
-    </div>
+  </div>
   } @else {
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-      <div class="rounded-lg border border-gray-800 bg-gray-900/40 p-4">
-        <p class="text-xs text-gray-500">Tracked repos</p>
-        <p class="text-2xl font-semibold text-white mt-1">{{ totalRepos() }}</p>
-      </div>
-      <div class="rounded-lg border border-gray-800 bg-gray-900/40 p-4">
-        <p class="text-xs text-gray-500">Total stars</p>
-        <p class="text-2xl font-semibold text-white mt-1">{{ totalStars() }}</p>
-      </div>
-      <div class="rounded-lg border border-gray-800 bg-gray-900/40 p-4">
-        <p class="text-xs text-gray-500">Total forks</p>
-        <p class="text-2xl font-semibold text-white mt-1">{{ totalForks() }}</p>
-      </div>
-      <div class="rounded-lg border border-gray-800 bg-gray-900/40 p-4">
-        <p class="text-xs text-gray-500">Open issues</p>
-        <p class="text-2xl font-semibold text-white mt-1">
-          {{ totalOpenIssues() }}
-        </p>
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+    <div class="rounded-lg border border-gray-800 bg-gray-900/40 p-4">
+      <p class="text-xs text-gray-500">Tracked repos</p>
+      <p class="text-2xl font-semibold text-white mt-1">{{ totalRepos() }}</p>
+    </div>
+    <div class="rounded-lg border border-gray-800 bg-gray-900/40 p-4">
+      <p class="text-xs text-gray-500">Total stars</p>
+      <p class="text-2xl font-semibold text-white mt-1">{{ totalStars() }}</p>
+    </div>
+    <div class="rounded-lg border border-gray-800 bg-gray-900/40 p-4">
+      <p class="text-xs text-gray-500">Total forks</p>
+      <p class="text-2xl font-semibold text-white mt-1">{{ totalForks() }}</p>
+    </div>
+    <div class="rounded-lg border border-gray-800 bg-gray-900/40 p-4">
+      <p class="text-xs text-gray-500">Open issues</p>
+      <p class="text-2xl font-semibold text-white mt-1">
+        {{ totalOpenIssues() }}
+      </p>
+    </div>
+  </div>
+
+  <div class="flex flex-col gap-4">
+    <div class="flex items-center justify-between flex-wrap gap-3">
+      <p class="text-sm font-medium text-white">Contribution activity</p>
+
+      <div class="flex items-center gap-2 flex-wrap">
+        <select
+          class="bg-gray-900 border border-gray-800 rounded-lg text-xs text-gray-300 px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-gray-600"
+          (change)="setDateRange($any($event.target).value)"
+        >
+          @for (option of dateRangeOptions; track option.key) {
+          <option
+            [value]="option.key"
+            [selected]="option.key === dateRangeKey()"
+          >
+            {{ option.label }}
+          </option>
+          }
+        </select>
+
+        <select
+          class="bg-gray-900 border border-gray-800 rounded-lg text-xs text-gray-300 px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-gray-600 max-w-40"
+          (change)="setRepoFilter($any($event.target).value)"
+        >
+          <option value="all" [selected]="selectedRepoId() === 'all'">
+            All repositories
+          </option>
+          @for (repo of repos(); track repo.id) {
+          <option [value]="repo.id" [selected]="repo.id === selectedRepoId()">
+            {{ repo.fullName }}
+          </option>
+          }
+        </select>
+
+        <select
+          class="bg-gray-900 border border-gray-800 rounded-lg text-xs text-gray-300 px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-gray-600 max-w-36"
+          (change)="setAuthorFilter($any($event.target).value)"
+        >
+          <option value="all" [selected]="selectedAuthor() === 'all'">
+            All contributors
+          </option>
+          @for (login of contributorOptions().logins; track login) {
+          <option [value]="login" [selected]="login === selectedAuthor()">
+            {{ login }}
+          </option>
+          } @if (contributorOptions().hasUnknown) {
+          <option
+            [value]="unknownAuthor"
+            [selected]="unknownAuthor === selectedAuthor()"
+          >
+            Unknown
+          </option>
+          }
+        </select>
       </div>
     </div>
 
-    <div class="flex flex-col gap-4">
-      <div class="flex items-center justify-between flex-wrap gap-3">
-        <p class="text-sm font-medium text-white">Contribution activity</p>
-
-        <div class="flex items-center gap-2 flex-wrap">
-          <select
-            class="bg-gray-900 border border-gray-800 rounded-lg text-xs text-gray-300 px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-gray-600"
-            (change)="setDateRange($any($event.target).value)"
-          >
-            @for (option of dateRangeOptions; track option.key) {
-              <option [value]="option.key" [selected]="option.key === dateRangeKey()">
-                {{ option.label }}
-              </option>
-            }
-          </select>
-
-          <select
-            class="bg-gray-900 border border-gray-800 rounded-lg text-xs text-gray-300 px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-gray-600 max-w-40"
-            (change)="setRepoFilter($any($event.target).value)"
-          >
-            <option value="all" [selected]="selectedRepoId() === 'all'">
-              All repositories
-            </option>
-            @for (repo of repos(); track repo.id) {
-              <option [value]="repo.id" [selected]="repo.id === selectedRepoId()">
-                {{ repo.fullName }}
-              </option>
-            }
-          </select>
-
-          <select
-            class="bg-gray-900 border border-gray-800 rounded-lg text-xs text-gray-300 px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-gray-600 max-w-36"
-            (change)="setAuthorFilter($any($event.target).value)"
-          >
-            <option value="all" [selected]="selectedAuthor() === 'all'">
-              All contributors
-            </option>
-            @for (login of contributorOptions().logins; track login) {
-              <option [value]="login" [selected]="login === selectedAuthor()">
-                {{ login }}
-              </option>
-            }
-            @if (contributorOptions().hasUnknown) {
-              <option
-                [value]="unknownAuthor"
-                [selected]="unknownAuthor === selectedAuthor()"
-              >
-                Unknown
-              </option>
-            }
-          </select>
+    @if (activityErrorMessage()) {
+    <p class="text-sm text-red-500">{{ activityErrorMessage() }}</p>
+    } @if (isActivityLoading()) {
+    <div class="grid grid-cols-1 gap-4">
+      <div
+        class="rounded-lg border border-gray-800 bg-gray-900/40 p-4 flex flex-col gap-4"
+      >
+        <lib-ui-skeleton class="h-3 w-32" />
+        <lib-ui-skeleton class="h-7 w-20" />
+        <div class="flex items-end gap-1 h-32">
+          @for (i of [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]; track i) {
+          <lib-ui-skeleton class="flex-1 h-full" />
+          }
         </div>
       </div>
 
-      @if (activityErrorMessage()) {
-        <p class="text-sm text-red-500">{{ activityErrorMessage() }}</p>
-      }
-
-      @if (isActivityLoading()) {
-        <div class="grid grid-cols-1 gap-4">
-          <div class="rounded-lg border border-gray-800 bg-gray-900/40 p-4 flex flex-col gap-4">
-            <lib-ui-skeleton class="h-3 w-32" />
-            <lib-ui-skeleton class="h-7 w-20" />
-            <div class="flex items-end gap-1 h-32">
-              @for (i of [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]; track i) {
-                <lib-ui-skeleton class="flex-1 h-full" />
-              }
-            </div>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div
+          class="rounded-lg border border-gray-800 bg-gray-900/40 p-4 flex flex-col gap-3"
+        >
+          <lib-ui-skeleton class="h-4 w-32" />
+          @for (i of [0, 1, 2, 3]; track i) {
+          <div class="flex items-center gap-3">
+            <lib-ui-skeleton class="h-3 w-24 shrink-0" />
+            <lib-ui-skeleton class="h-2.5 flex-1" />
+            <lib-ui-skeleton class="h-3 w-6 shrink-0" />
           </div>
-
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div class="rounded-lg border border-gray-800 bg-gray-900/40 p-4 flex flex-col gap-3">
-              <lib-ui-skeleton class="h-4 w-32" />
-              @for (i of [0, 1, 2, 3]; track i) {
-                <div class="flex items-center gap-3">
-                  <lib-ui-skeleton class="h-3 w-24 shrink-0" />
-                  <lib-ui-skeleton class="h-2.5 flex-1" />
-                  <lib-ui-skeleton class="h-3 w-6 shrink-0" />
-                </div>
-              }
-            </div>
-
-            <div class="rounded-lg border border-gray-800 bg-gray-900/40 p-4 flex flex-col gap-3">
-              <lib-ui-skeleton class="h-4 w-32" />
-              @for (i of [0, 1, 2, 3]; track i) {
-                <div class="flex items-center gap-3">
-                  <lib-ui-skeleton class="size-5 rounded-full shrink-0" />
-                  <lib-ui-skeleton class="h-3 w-20 shrink-0" />
-                  <lib-ui-skeleton class="h-2.5 flex-1" />
-                  <lib-ui-skeleton class="h-3 w-6 shrink-0" />
-                </div>
-              }
-            </div>
-          </div>
-        </div>
-      } @else if (totalContributions() === 0) {
-        <div class="rounded-lg border border-gray-800 px-4 py-10 text-center">
-          <p class="text-sm text-gray-500">
-            No contributions found for the selected filters.
-          </p>
-        </div>
-      } @else {
-        <div class="rounded-lg border border-gray-800 bg-gray-900/40 p-4 flex flex-col gap-2">
-          <div class="flex items-start justify-between gap-3">
-            <div>
-              <p class="text-xs text-gray-500">Contributions</p>
-              <p class="text-2xl font-semibold text-white mt-1">
-                {{ totalContributions() }}
-              </p>
-            </div>
-
-            <div class="flex items-center gap-0.5 bg-gray-900 border border-gray-800 rounded-lg p-0.5">
-              <button
-                type="button"
-                class="px-2 py-1 rounded-md text-xs transition-colors"
-                [class.bg-gray-800]="activityView() === 'bar'"
-                [class.text-white]="activityView() === 'bar'"
-                [class.text-gray-500]="activityView() !== 'bar'"
-                (click)="setActivityView('bar')"
-              >
-                Bars
-              </button>
-              <button
-                type="button"
-                class="px-2 py-1 rounded-md text-xs transition-colors"
-                [class.bg-gray-800]="activityView() === 'heatmap'"
-                [class.text-white]="activityView() === 'heatmap'"
-                [class.text-gray-500]="activityView() !== 'heatmap'"
-                (click)="setActivityView('heatmap')"
-              >
-                Heatmap
-              </button>
-            </div>
-          </div>
-
-          @if (activityView() === 'heatmap') {
-            <apx-chart
-              [chart]="activityHeatmapChart"
-              [series]="activityHeatmapSeries()"
-              [xaxis]="activityHeatmapXaxis()"
-              [yaxis]="activityHeatmapYaxis"
-              [plotOptions]="activityHeatmapPlotOptions()"
-              [colors]="activityHeatmapColors"
-              [dataLabels]="noDataLabels"
-              [grid]="chartGrid"
-              [stroke]="activityHeatmapStroke"
-              [states]="activityHeatmapStates"
-              [tooltip]="activityHeatmapTooltip()"
-              [legend]="{ show: false }"
-            ></apx-chart>
-            <div class="flex items-center justify-end gap-1.5 text-xs text-gray-500">
-              <span>Less</span>
-              @for (color of activityHeatmapLegend; track color) {
-                <span class="size-3 rounded-sm" [style.background-color]="color"></span>
-              }
-              <span>More</span>
-            </div>
-          } @else {
-            <apx-chart
-              [chart]="activityChart"
-              [series]="activityChartSeries()"
-              [xaxis]="activityChartXaxis()"
-              [plotOptions]="activityPlotOptions"
-              [colors]="activityChartColors()"
-              [dataLabels]="noDataLabels"
-              [grid]="chartGrid"
-              [tooltip]="stackedTooltip"
-              [legend]="stackedLegend"
-            ></apx-chart>
           }
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div class="rounded-lg border border-gray-800 bg-gray-900/40 p-4 flex flex-col gap-2">
-            <p class="text-sm font-medium text-white">Contributions by repo</p>
-            <apx-chart
-              [chart]="repoChart()"
-              [series]="repoChartSeries()"
-              [xaxis]="repoChartXaxis()"
-              [plotOptions]="horizontalPlotOptions"
-              [colors]="repoChartColors()"
-              [dataLabels]="insideBarDataLabels"
-              [grid]="chartGrid"
-              [tooltip]="noTooltip"
-              [legend]="stackedLegend"
-            ></apx-chart>
+        <div
+          class="rounded-lg border border-gray-800 bg-gray-900/40 p-4 flex flex-col gap-3"
+        >
+          <lib-ui-skeleton class="h-4 w-32" />
+          @for (i of [0, 1, 2, 3]; track i) {
+          <div class="flex items-center gap-3">
+            <lib-ui-skeleton class="size-5 rounded-full shrink-0" />
+            <lib-ui-skeleton class="h-3 w-20 shrink-0" />
+            <lib-ui-skeleton class="h-2.5 flex-1" />
+            <lib-ui-skeleton class="h-3 w-6 shrink-0" />
           </div>
-
-          <div class="rounded-lg border border-gray-800 bg-gray-900/40 p-4 flex flex-col gap-2">
-            <p class="text-sm font-medium text-white">Top contributors</p>
-            <apx-chart
-              [chart]="contributorChart()"
-              [series]="contributorChartSeries()"
-              [xaxis]="contributorChartXaxis()"
-              [plotOptions]="horizontalPlotOptions"
-              [colors]="contributorChartColors()"
-              [dataLabels]="insideBarDataLabels"
-              [grid]="chartGrid"
-              [tooltip]="noTooltip"
-              [legend]="stackedLegend"
-            ></apx-chart>
-          </div>
+          }
         </div>
+      </div>
+    </div>
+    } @else if (totalContributions() === 0) {
+    <div class="rounded-lg border border-gray-800 px-4 py-10 text-center">
+      <p class="text-sm text-gray-500">
+        No contributions found for the selected filters.
+      </p>
+    </div>
+    } @else {
+    <div
+      class="rounded-lg border border-gray-800 bg-gray-900/40 p-4 flex flex-col"
+    >
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <p class="text-xs text-gray-500">Contributions</p>
+          <p class="text-2xl font-semibold text-white mt-1">
+            {{ totalContributions() }}
+          </p>
+        </div>
+
+        <lib-ui-button-group
+          [options]="activityViewOptions"
+          [value]="activityView()"
+          (valueChange)="setActivityView($any($event))"
+        ></lib-ui-button-group>
+      </div>
+
+      @if (activityView() === 'heatmap') {
+      <apx-chart
+        [chart]="activityHeatmapChart"
+        [series]="activityHeatmapSeries()"
+        [xaxis]="activityHeatmapXaxis()"
+        [yaxis]="activityHeatmapYaxis"
+        [plotOptions]="activityHeatmapPlotOptions()"
+        [colors]="activityHeatmapColors"
+        [dataLabels]="noDataLabels"
+        [grid]="chartGrid"
+        [stroke]="activityHeatmapStroke"
+        [states]="activityHeatmapStates"
+        [tooltip]="activityHeatmapTooltip()"
+        [legend]="{ show: false }"
+      ></apx-chart>
+      <div class="flex items-center justify-end gap-1.5 text-xs text-gray-500">
+        <span>Less</span>
+        @for (color of activityHeatmapLegend; track color) {
+        <span class="size-3 rounded-sm" [style.background-color]="color"></span>
+        }
+        <span>More</span>
+      </div>
+      } @else {
+      <apx-chart
+        [chart]="activityChart"
+        [series]="activityChartSeries()"
+        [xaxis]="activityChartXaxis()"
+        [plotOptions]="activityPlotOptions"
+        [colors]="activityChartColors()"
+        [dataLabels]="noDataLabels"
+        [grid]="chartGrid"
+        [tooltip]="stackedTooltip"
+        [legend]="stackedLegend"
+      ></apx-chart>
       }
     </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div
+        class="rounded-lg border border-gray-800 bg-gray-900/40 p-4 flex flex-col gap-2"
+      >
+        <p class="text-sm font-medium text-white">Contributions by repo</p>
+        <apx-chart
+          [chart]="repoChart()"
+          [series]="repoChartSeries()"
+          [xaxis]="repoChartXaxis()"
+          [plotOptions]="horizontalPlotOptions"
+          [colors]="repoChartColors()"
+          [dataLabels]="insideBarDataLabels"
+          [grid]="chartGrid"
+          [tooltip]="noTooltip"
+          [legend]="stackedLegend"
+        ></apx-chart>
+      </div>
+
+      <div
+        class="rounded-lg border border-gray-800 bg-gray-900/40 p-4 flex flex-col gap-2"
+      >
+        <p class="text-sm font-medium text-white">Top contributors</p>
+        <apx-chart
+          [chart]="contributorChart()"
+          [series]="contributorChartSeries()"
+          [xaxis]="contributorChartXaxis()"
+          [plotOptions]="horizontalPlotOptions"
+          [colors]="contributorChartColors()"
+          [dataLabels]="insideBarDataLabels"
+          [grid]="chartGrid"
+          [tooltip]="noTooltip"
+          [legend]="stackedLegend"
+        ></apx-chart>
+      </div>
+    </div>
+    }
+  </div>
   }
 </div>
