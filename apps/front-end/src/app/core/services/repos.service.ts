@@ -2,6 +2,7 @@ import { HttpClient, httpResource } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import type {
   GithubRepo,
+  RepoCommit,
   RepoCommitWithContext,
   RepoDetailResponse,
   SelectedRepo,
@@ -31,6 +32,28 @@ export class ReposService {
       const repoId = id();
       return repoId ? `/api/repos/tracked/${repoId}` : undefined;
     });
+  }
+
+  /**
+   * Separate resource from repoDetail() so that changing the date filter
+   * only re-triggers this request - if the two are combined into one
+   * resource, every filter change re-enters "loading" for the whole thing,
+   * including the repo metadata that didn't actually change.
+   */
+  repoCommits(id: () => string | undefined, since: () => string | undefined) {
+    return httpResource<RepoCommit[]>(
+      () => {
+        const repoId = id();
+        if (!repoId) return undefined;
+        const sinceValue = since();
+        const params: Record<string, string> = {};
+        if (sinceValue) {
+          params['since'] = sinceValue;
+        }
+        return { url: `/api/repos/tracked/${repoId}/commits`, params };
+      },
+      { defaultValue: [] },
+    );
   }
 
   contributionActivity(since: () => string | undefined) {

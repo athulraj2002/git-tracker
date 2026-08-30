@@ -35,6 +35,16 @@ export class ReposController {
     return this.reposService.getRepoDetail(user.sub, id);
   }
 
+  @Get('tracked/:id/commits')
+  @ApiOperation({ summary: 'List commits for a tracked repository, optionally since a date' })
+  getTrackedCommits(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Query('since') since?: string,
+  ) {
+    return this.reposService.getRepoCommits(user.sub, id, since);
+  }
+
   @Get('commits')
   @ApiOperation({
     summary: 'List recent commits across all tracked repositories',

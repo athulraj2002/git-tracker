@@ -40,47 +40,69 @@ export class GithubReposService {
     });
   }
 
+  /**
+   * GitHub returns the newest `perPage` commits matching `since`, not a
+   * sample spread across the whole window - for an active repo, the newest
+   * 100 commits can easily all fall within a few days, so widening `since`
+   * further back returns the exact same page. `maxPages` lets a caller that
+   * wants real date-range filtering (repo-detail) page further back; callers
+   * that don't (the dashboard's per-repo aggregation) can leave it at the
+   * default of 1 page to avoid the added GitHub API calls per tracked repo.
+   */
   async getCommits(
     accessToken: string,
     fullName: string,
-    options?: { since?: string; perPage?: number },
+    options?: { since?: string; perPage?: number; maxPages?: number },
   ): Promise<RepoCommit[]> {
-    const params = new URLSearchParams({
-      per_page: String(options?.perPage ?? 10),
-    });
-    if (options?.since) {
-      params.set('since', options.since);
-    }
+    const perPage = options?.perPage ?? 10;
+    const maxPages = options?.maxPages ?? 1;
+    const commits: RepoCommit[] = [];
 
-    const response = await fetch(
-      `https://api.github.com/repos/${fullName}/commits?${params.toString()}`,
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          Accept: 'application/vnd.github+json',
-        },
-      },
-    );
-    if (!response.ok) {
-      throw new UnauthorizedException(
-        'Unable to fetch commits for this repository.',
-      );
-    }
-
-    const body = await response.json();
-    return (body as unknown[]).map((commit) => {
-      const c = commit as Record<string, unknown>;
-      const commitInfo = c['commit'] as Record<string, unknown>;
-      const author = commitInfo['author'] as Record<string, unknown>;
-      const authorAccount = c['author'] as Record<string, unknown> | null;
-      return RepoCommitSchema.parse({
-        sha: c['sha'],
-        message: (commitInfo['message'] as string).split('\n')[0],
-        authorLogin: authorAccount?.['login'] ?? null,
-        authorAvatarUrl: authorAccount?.['avatar_url'] ?? null,
-        committedAt: author['date'],
-        htmlUrl: c['html_url'],
+    for (let page = 1; page <= maxPages; page++) {
+      const params = new URLSearchParams({
+        per_page: String(perPage),
+        page: String(page),
       });
-    });
+      if (options?.since) {
+        params.set('since', options.since);
+      }
+
+      const response = await fetch(
+        `https://api.github.com/repos/${fullName}/commits?${params.toString()}`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            Accept: 'application/vnd.github+json',
+          },
+        },
+      );
+      if (!response.ok) {
+        throw new UnauthorizedException(
+          'Unable to fetch commits for this repository.',
+        );
+      }
+
+      const body = (await response.json()) as unknown[];
+      commits.push(
+        ...body.map((commit) => {
+          const c = commit as Record<string, unknown>;
+          const commitInfo = c['commit'] as Record<string, unknown>;
+          const author = commitInfo['author'] as Record<string, unknown>;
+          const authorAccount = c['author'] as Record<string, unknown> | null;
+          return RepoCommitSchema.parse({
+            sha: c['sha'],
+            message: (commitInfo['message'] as string).split('\n')[0],
+            authorLogin: authorAccount?.['login'] ?? null,
+            authorAvatarUrl: authorAccount?.['avatar_url'] ?? null,
+            committedAt: author['date'],
+            htmlUrl: c['html_url'],
+          });
+        }),
+      );
+
+      if (body.length < perPage) break;
+    }
+
+    return commits;
   }
 }

@@ -4,14 +4,14 @@ import { ChartComponent, type ApexAxisChartSeries, type ApexChart, type ApexXAxi
 import type { ApexTooltipCustomOpts } from 'apexcharts';
 import { ButtonGroup, Select, Skeleton, type ButtonGroupOption, type SelectOption } from '@org/ui';
 import type {
-  ActivitySeries,
   ContributorStat,
   DateRangeKey,
   RepoCommitWithContext,
   RepoContribution,
 } from '@org/types';
 import { bucketFor, extractErrorMessage, granularityFor, localDateKey } from '@org/helpers';
-import { CATEGORICAL_COLORS, DATE_RANGE_OPTIONS, OTHER_COLOR, OTHER_LABEL, RANGE_DAYS } from '../../common/data';
+import { DATE_RANGE_OPTIONS, RANGE_DAYS } from '../../common/data';
+import { buildStackedSeries } from '../../common/chart-utils';
 import {
   ACTIVITY_CHART,
   ACTIVITY_HEATMAP_CHART,
@@ -30,7 +30,6 @@ import {
   HEATMAP_LEVEL_COLORS,
   HORIZONTAL_PLOT_OPTIONS,
   INSIDE_BAR_DATA_LABELS,
-  MAX_STACK_SERIES,
   MONTH_LABELS,
   NO_DATA_LABELS,
   NO_TOOLTIP,
@@ -210,7 +209,7 @@ export class Dashboard {
 
     bucketOrder.sort();
     const categories = bucketOrder.map((key) => bucketLabels.get(key) as string);
-    const { series, colors } = this.buildStackedSeries(bucketOrder, authorTotals, grid);
+    const { series, colors } = buildStackedSeries(bucketOrder, authorTotals, grid);
     return { categories, series, colors };
   });
 
@@ -233,7 +232,7 @@ export class Dashboard {
       authorGrid.set(commit.repoId, (authorGrid.get(commit.repoId) ?? 0) + 1);
     }
 
-    const { series, colors } = this.buildStackedSeries(
+    const { series, colors } = buildStackedSeries(
       repos.map((repo) => repo.repoId),
       authorTotals,
       grid,
@@ -260,7 +259,7 @@ export class Dashboard {
       repoGrid.set(author, (repoGrid.get(author) ?? 0) + 1);
     }
 
-    const { series, colors } = this.buildStackedSeries(
+    const { series, colors } = buildStackedSeries(
       contributors.map((contributor) => contributor.author),
       repoTotals,
       grid,
@@ -487,39 +486,6 @@ export class Dashboard {
   // ---------------------------------------------------------------------
   // Private functions
   // ---------------------------------------------------------------------
-
-  /**
-   * Ranks the secondary-dimension keys by total, caps at MAX_STACK_SERIES,
-   * folds the rest into an "Other" series, and assigns the validated
-   * categorical color order. Shared by every stacked chart on this page.
-   */
-  private buildStackedSeries(
-    categoryKeys: string[],
-    secondaryTotals: Map<string, number>,
-    grid: Map<string, Map<string, number>>,
-  ): { series: ActivitySeries[]; colors: string[] } {
-    const ranked = [...secondaryTotals.entries()].sort((a, b) => b[1] - a[1]);
-    const top = ranked.slice(0, MAX_STACK_SERIES).map(([key]) => key);
-    const overflow = ranked.slice(MAX_STACK_SERIES).map(([key]) => key);
-
-    const series: ActivitySeries[] = top.map((key) => ({
-      name: key,
-      data: categoryKeys.map((categoryKey) => grid.get(key)?.get(categoryKey) ?? 0),
-    }));
-    const colors = top.map((_, index) => CATEGORICAL_COLORS[index % CATEGORICAL_COLORS.length]);
-
-    if (overflow.length > 0) {
-      series.push({
-        name: OTHER_LABEL,
-        data: categoryKeys.map((categoryKey) =>
-          overflow.reduce((sum, key) => sum + (grid.get(key)?.get(categoryKey) ?? 0), 0),
-        ),
-      });
-      colors.push(OTHER_COLOR);
-    }
-
-    return { series, colors };
-  }
 
   protected setActivityView(view: 'bar' | 'heatmap'): void {
     this.activityView.set(view);

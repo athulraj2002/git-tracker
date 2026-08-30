@@ -7,6 +7,7 @@ import {
 import { and, eq } from 'drizzle-orm';
 import type {
   GithubRepo,
+  RepoCommit,
   RepoCommitWithContext,
   RepoDetailResponse,
   SelectedRepo,
@@ -40,13 +41,7 @@ export class ReposService {
     userId: string,
     repoId: string,
   ): Promise<RepoDetailResponse> {
-    const row = await this.db.query.trackedRepos.findFirst({
-      where: and(eq(trackedRepos.id, repoId), eq(trackedRepos.userId, userId)),
-    });
-    if (!row) {
-      throw new NotFoundException('Tracked repository not found.');
-    }
-
+    const row = await this.findTrackedRepoRow(userId, repoId);
     const identity = await this.getGithubIdentity(userId);
     const commits = await this.githubReposService.getCommits(
       identity.accessToken as string,
@@ -54,6 +49,30 @@ export class ReposService {
     );
 
     return { repo: toTrackedRepo(row), commits };
+  }
+
+  /**
+   * Separate from getRepoDetail so that changing the repo-detail page's date
+   * filter only re-triggers this request, not the repo metadata one - the
+   * two used to be fetched together, which meant the whole page (including
+   * the repo header) flashed back to a loading state on every filter change.
+   */
+  async getRepoCommits(
+    userId: string,
+    repoId: string,
+    since?: string,
+  ): Promise<RepoCommit[]> {
+    const row = await this.findTrackedRepoRow(userId, repoId);
+    const identity = await this.getGithubIdentity(userId);
+    // maxPages: 3 (up to 300 commits) so a wider date-range selection can
+    // actually surface more history for an active repo - GitHub returns the
+    // newest `perPage` commits matching `since`, so a single page can't tell
+    // a 7-day window from a 365-day one once a repo has 100+ recent commits.
+    return this.githubReposService.getCommits(
+      identity.accessToken as string,
+      row.fullName,
+      { since, perPage: 100, maxPages: 3 },
+    );
   }
 
   async getContributionActivity(
@@ -128,6 +147,16 @@ export class ReposService {
       .returning();
 
     return rows.map(toTrackedRepo);
+  }
+
+  private async findTrackedRepoRow(userId: string, repoId: string) {
+    const row = await this.db.query.trackedRepos.findFirst({
+      where: and(eq(trackedRepos.id, repoId), eq(trackedRepos.userId, userId)),
+    });
+    if (!row) {
+      throw new NotFoundException('Tracked repository not found.');
+    }
+    return row;
   }
 
   private async getGithubIdentity(userId: string) {
