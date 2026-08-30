@@ -1,8 +1,8 @@
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { ChartComponent, type ApexAxisChartSeries, type ApexChart, type ApexXAxis } from 'ng-apexcharts';
-import { Select, Skeleton, type SelectOption } from '@org/ui';
+import { Button, Dialog, Select, Skeleton, type SelectOption } from '@org/ui';
 import type { ContributorStat, DateRangeKey } from '@org/types';
 import { bucketFor, extractErrorMessage } from '@org/helpers';
 import { ACCENT_COLOR, DATE_RANGE_OPTIONS, RANGE_DAYS } from '../../common/data';
@@ -28,7 +28,7 @@ const TOP_CONTRIBUTOR_COUNT = 6;
 
 @Component({
   selector: 'app-repo-detail',
-  imports: [RouterLink, DatePipe, Skeleton, ChartComponent, Select],
+  imports: [RouterLink, DatePipe, Skeleton, ChartComponent, Select, Dialog, Button],
   templateUrl: './repo-detail.html',
 })
 export class RepoDetail {
@@ -41,8 +41,13 @@ export class RepoDetail {
     (option) => ({ value: option.key, label: option.label }),
   );
   protected readonly dateRangeKey = signal<DateRangeKey>('30d');
+  protected readonly isSettingsOpen = signal(false);
+  protected readonly isInfoOpen = signal(false);
+  protected readonly isUntracking = signal(false);
+  protected readonly untrackErrorMessage = signal('');
 
   private readonly reposService = inject(ReposService);
+  private readonly router = inject(Router);
 
   readonly id = input<string>();
 
@@ -175,5 +180,32 @@ export class RepoDetail {
 
   protected setDateRange(key: string): void {
     this.dateRangeKey.set(key as DateRangeKey);
+  }
+
+  protected openSettings(): void {
+    this.untrackErrorMessage.set('');
+    this.isSettingsOpen.set(true);
+  }
+
+  protected openInfo(): void {
+    this.isInfoOpen.set(true);
+  }
+
+  protected async untrackRepo(): Promise<void> {
+    const repoId = this.id();
+    if (!repoId) return;
+
+    this.isUntracking.set(true);
+    this.untrackErrorMessage.set('');
+    try {
+      await this.reposService.untrackRepo(repoId);
+      await this.router.navigateByUrl('/repos');
+    } catch (error) {
+      this.untrackErrorMessage.set(
+        extractErrorMessage(error, 'Unable to untrack this repository.'),
+      );
+    } finally {
+      this.isUntracking.set(false);
+    }
   }
 }

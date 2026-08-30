@@ -112,6 +112,16 @@ export class ReposService {
       .sort((a, b) => b.committedAt.localeCompare(a.committedAt));
   }
 
+  async untrackRepo(userId: string, repoId: string): Promise<void> {
+    const deleted = await this.db
+      .delete(trackedRepos)
+      .where(and(eq(trackedRepos.id, repoId), eq(trackedRepos.userId, userId)))
+      .returning({ id: trackedRepos.id });
+    if (deleted.length === 0) {
+      throw new NotFoundException('Tracked repository not found.');
+    }
+  }
+
   async setTrackedRepos(
     userId: string,
     repos: SelectedRepo[],

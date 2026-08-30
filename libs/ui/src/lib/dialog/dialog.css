@@ -1,0 +1,17 @@
+/* Native <dialog> toggles display: none <-> block via its [open] attribute,
+   so this keyframe animation retriggers fresh every time it opens - no
+   class-toggling needed on our end. */
+dialog[open] {
+  animation: dialog-slide-down 0.18s ease-out;
+}
+
+@keyframes dialog-slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

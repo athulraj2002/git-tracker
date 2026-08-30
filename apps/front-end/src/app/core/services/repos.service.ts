@@ -75,4 +75,8 @@ export class ReposService {
       this.http.put<TrackedRepo[]>('/api/repos/tracked', { repos }),
     );
   }
+
+  untrackRepo(id: string): Promise<void> {
+    return firstValueFrom(this.http.delete<void>(`/api/repos/tracked/${id}`));
+  }
 }

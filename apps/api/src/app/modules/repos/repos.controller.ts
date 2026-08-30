@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Put, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Put, Query, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { SetTrackedReposRequestSchema } from '@org/zod-schemas';
 import type { SetTrackedReposRequest } from '@org/types';
@@ -64,5 +64,15 @@ export class ReposController {
     body: SetTrackedReposRequest,
   ) {
     return this.reposService.setTrackedRepos(user.sub, body.repos);
+  }
+
+  @Delete('tracked/:id')
+  @HttpCode(204)
+  @ApiOperation({ summary: 'Stop tracking a repository' })
+  async untrackRepo(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<void> {
+    await this.reposService.untrackRepo(user.sub, id);
   }
 }
