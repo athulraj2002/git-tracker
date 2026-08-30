@@ -2,7 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { ChartComponent, type ApexAxisChartSeries, type ApexChart, type ApexXAxis } from 'ng-apexcharts';
 import type { ApexTooltipCustomOpts } from 'apexcharts';
-import { ButtonGroup, Skeleton, type ButtonGroupOption } from '@org/ui';
+import { ButtonGroup, Select, Skeleton, type ButtonGroupOption, type SelectOption } from '@org/ui';
 import type {
   ActivitySeries,
   ContributorStat,
@@ -48,7 +48,7 @@ const TOP_CONTRIBUTOR_COUNT = 6;
 
 @Component({
   selector: 'app-dashboard',
-  imports: [RouterLink, Skeleton, ChartComponent, ButtonGroup],
+  imports: [RouterLink, Skeleton, ChartComponent, ButtonGroup, Select],
   templateUrl: './dashboard.html',
 })
 export class Dashboard {
@@ -59,8 +59,9 @@ export class Dashboard {
   private readonly reposService = inject(ReposService);
   private readonly router = inject(Router);
 
-  protected readonly dateRangeOptions = DATE_RANGE_OPTIONS;
-  protected readonly unknownAuthor = UNKNOWN_AUTHOR;
+  protected readonly dateRangeSelectOptions: SelectOption[] = DATE_RANGE_OPTIONS.map(
+    (option) => ({ value: option.key, label: option.label }),
+  );
   protected readonly dateRangeKey = signal<DateRangeKey>('30d');
   protected readonly selectedRepoId = signal<string>('all');
   protected readonly selectedAuthor = signal<string>('all');
@@ -138,6 +139,11 @@ export class Dashboard {
     this.repos().reduce((sum, repo) => sum + repo.openIssues, 0),
   );
 
+  protected readonly repoFilterOptions = computed<SelectOption[]>(() => [
+    { value: 'all', label: 'All repositories' },
+    ...this.repos().map((repo) => ({ value: repo.id, label: repo.fullName })),
+  ]);
+
   private readonly repoFilteredCommits = computed<RepoCommitWithContext[]>(() => {
     const list = this.commitsResource.value();
     const repoId = this.selectedRepoId();
@@ -155,6 +161,18 @@ export class Dashboard {
       }
     }
     return { logins: [...logins].sort(), hasUnknown };
+  });
+
+  protected readonly contributorFilterOptions = computed<SelectOption[]>(() => {
+    const { logins, hasUnknown } = this.contributorOptions();
+    const options: SelectOption[] = [
+      { value: 'all', label: 'All contributors' },
+      ...logins.map((login) => ({ value: login, label: login })),
+    ];
+    if (hasUnknown) {
+      options.push({ value: UNKNOWN_AUTHOR, label: 'Unknown' });
+    }
+    return options;
   });
 
   protected readonly filteredCommits = computed<RepoCommitWithContext[]>(() => {

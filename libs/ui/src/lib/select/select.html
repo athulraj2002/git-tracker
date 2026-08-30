@@ -1,0 +1,5 @@
+<select [class]="classes()" [value]="value()" (change)="value.set($any($event.target).value)">
+  @for (option of options(); track option.value) {
+    <option [value]="option.value">{{ option.label }}</option>
+  }
+</select>

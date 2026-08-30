@@ -57,54 +57,25 @@
       <p class="text-sm font-medium text-white">Contribution activity</p>
 
       <div class="flex items-center gap-2 flex-wrap">
-        <select
-          class="bg-gray-900 border border-gray-800 rounded-lg text-xs text-gray-300 px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-gray-600"
-          (change)="setDateRange($any($event.target).value)"
-        >
-          @for (option of dateRangeOptions; track option.key) {
-          <option
-            [value]="option.key"
-            [selected]="option.key === dateRangeKey()"
-          >
-            {{ option.label }}
-          </option>
-          }
-        </select>
+        <lib-ui-select
+          [options]="dateRangeSelectOptions"
+          [value]="dateRangeKey()"
+          (valueChange)="setDateRange($event)"
+        ></lib-ui-select>
 
-        <select
-          class="bg-gray-900 border border-gray-800 rounded-lg text-xs text-gray-300 px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-gray-600 max-w-40"
-          (change)="setRepoFilter($any($event.target).value)"
-        >
-          <option value="all" [selected]="selectedRepoId() === 'all'">
-            All repositories
-          </option>
-          @for (repo of repos(); track repo.id) {
-          <option [value]="repo.id" [selected]="repo.id === selectedRepoId()">
-            {{ repo.fullName }}
-          </option>
-          }
-        </select>
+        <lib-ui-select
+          [options]="repoFilterOptions()"
+          [value]="selectedRepoId()"
+          (valueChange)="setRepoFilter($event)"
+          [class]="'max-w-40'"
+        ></lib-ui-select>
 
-        <select
-          class="bg-gray-900 border border-gray-800 rounded-lg text-xs text-gray-300 px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-gray-600 max-w-36"
-          (change)="setAuthorFilter($any($event.target).value)"
-        >
-          <option value="all" [selected]="selectedAuthor() === 'all'">
-            All contributors
-          </option>
-          @for (login of contributorOptions().logins; track login) {
-          <option [value]="login" [selected]="login === selectedAuthor()">
-            {{ login }}
-          </option>
-          } @if (contributorOptions().hasUnknown) {
-          <option
-            [value]="unknownAuthor"
-            [selected]="unknownAuthor === selectedAuthor()"
-          >
-            Unknown
-          </option>
-          }
-        </select>
+        <lib-ui-select
+          [options]="contributorFilterOptions()"
+          [value]="selectedAuthor()"
+          (valueChange)="setAuthorFilter($event)"
+          [class]="'max-w-36'"
+        ></lib-ui-select>
       </div>
     </div>
 
