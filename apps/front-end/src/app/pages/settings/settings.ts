@@ -28,6 +28,9 @@ export class Settings {
         .map((repo) => Number(repo.providerRepoId)),
     ),
   );
+  protected readonly isSaving = signal(false);
+  protected readonly savedMessage = signal('');
+  protected readonly saveErrorMessage = signal('');
 
   protected readonly isLoading = computed(
     () =>
@@ -42,10 +45,6 @@ export class Settings {
       this.trackedResource.error();
     return error ? extractErrorMessage(error, 'Unable to load your settings.') : '';
   });
-
-  protected readonly isSaving = signal(false);
-  protected readonly savedMessage = signal('');
-  protected readonly saveErrorMessage = signal('');
 
   protected setSelected(repoId: number, checked: boolean): void {
     this.savedMessage.set('');

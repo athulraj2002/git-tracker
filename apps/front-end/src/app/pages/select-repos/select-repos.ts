@@ -25,15 +25,14 @@ export class SelectRepos {
         .map((repo) => Number(repo.providerRepoId)),
     ),
   );
+  protected readonly isSaving = signal(false);
+  private readonly saveErrorMessage = signal('');
 
   protected readonly isLoading = computed(
     () =>
       this.availableResource.status() === 'loading' ||
       this.trackedResource.status() === 'loading',
   );
-  protected readonly isSaving = signal(false);
-
-  private readonly saveErrorMessage = signal('');
   protected readonly errorMessage = computed(() => {
     if (this.saveErrorMessage()) {
       return this.saveErrorMessage();
