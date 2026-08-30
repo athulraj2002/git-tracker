@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { GithubRepoSchema } from './github';
 
 export const SelectedRepoSchema = z.object({
   id: z.number().int(),
@@ -30,7 +31,21 @@ export const TrackedRepoSchema = z.object({
   stars: z.number().int().min(0),
   forks: z.number().int().min(0),
   openIssues: z.number().int().min(0),
+  // Null if this repo was only ever synced from GET /repos/available and
+  // never actually tracked.
+  trackedAt: z.string().datetime().nullable(),
   createdAt: z.string().datetime(),
+});
+
+// GET /repos/available's response shape: the live GitHub listing, enriched
+// with whether (and under what internal id) each repo is already tracked -
+// `id` here is still GitHub's own numeric repo id, unlike TrackedRepoSchema.
+export const AvailableRepoSchema = GithubRepoSchema.extend({
+  // Internal repos-table id, always present - every repo the user's GitHub
+  // token can see gets a row on sync, so this is what detail/commit routes
+  // should link to even when the repo isn't tracked.
+  repoId: z.string().uuid(),
+  trackedId: z.string().uuid().nullable(),
 });
 
 export const RepoCommitSchema = z.object({

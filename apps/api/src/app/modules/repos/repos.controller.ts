@@ -66,6 +66,15 @@ export class ReposController {
     return this.reposService.setTrackedRepos(user.sub, body.repos);
   }
 
+  @Put('tracked/:id')
+  @ApiOperation({ summary: 'Start tracking a specific repository' })
+  trackRepo(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ) {
+    return this.reposService.trackRepo(user.sub, id);
+  }
+
   @Delete('tracked/:id')
   @HttpCode(204)
   @ApiOperation({ summary: 'Stop tracking a repository' })

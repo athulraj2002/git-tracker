@@ -14,30 +14,26 @@ export class SelectRepos {
   private readonly router = inject(Router);
 
   private readonly availableResource = this.reposService.availableRepos();
-  private readonly trackedResource = this.reposService.trackedRepos();
 
   protected readonly repos = this.availableResource.value;
   protected readonly selectedIds = linkedSignal<Set<number>>(() =>
     new Set(
-      this.trackedResource
-        .value()
-        .filter((repo) => repo.provider === 'github')
-        .map((repo) => Number(repo.providerRepoId)),
+      this.repos()
+        .filter((repo) => repo.trackedId !== null)
+        .map((repo) => repo.id),
     ),
   );
   protected readonly isSaving = signal(false);
   private readonly saveErrorMessage = signal('');
 
   protected readonly isLoading = computed(
-    () =>
-      this.availableResource.status() === 'loading' ||
-      this.trackedResource.status() === 'loading',
+    () => this.availableResource.status() === 'loading',
   );
   protected readonly errorMessage = computed(() => {
     if (this.saveErrorMessage()) {
       return this.saveErrorMessage();
     }
-    const error = this.availableResource.error() ?? this.trackedResource.error();
+    const error = this.availableResource.error();
     return error
       ? extractErrorMessage(error, 'Unable to load your GitHub repositories.')
       : '';

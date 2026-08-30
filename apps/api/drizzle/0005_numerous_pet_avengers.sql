@@ -1,0 +1,2 @@
+ALTER TABLE "tracked_repos" ADD COLUMN "tracked_at" timestamp with time zone;--> statement-breakpoint
+ALTER TABLE "tracked_repos" ADD COLUMN "synced_at" timestamp with time zone DEFAULT now() NOT NULL;

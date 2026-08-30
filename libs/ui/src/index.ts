@@ -7,3 +7,4 @@ export * from './lib/dialog/dialog';
 export * from './lib/radio-group/radio-group';
 export * from './lib/select/select';
 export * from './lib/skeleton/skeleton';
+export * from './lib/toggle/toggle';

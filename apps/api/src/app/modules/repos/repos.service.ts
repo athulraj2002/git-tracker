@@ -4,9 +4,9 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, isNotNull, notInArray, sql } from 'drizzle-orm';
 import type {
-  GithubRepo,
+  AvailableRepo,
   RepoCommit,
   RepoCommitWithContext,
   RepoDetailResponse,
@@ -25,14 +25,83 @@ export class ReposService {
     private readonly githubReposService: GithubReposService,
   ) {}
 
-  async getAvailableRepos(userId: string): Promise<GithubRepo[]> {
+  /**
+   * Upserts the user's live GitHub repo listing into the repos table -
+   * metadata for every repo the token can see is persisted here, tracked or
+   * not, so a later tracked/detail view doesn't need to re-fetch it. This
+   * must never touch `trackedAt`: it's a metadata sync, not a tracking
+   * action, so that column is simply omitted from both the insert values
+   * (new row -> defaults to untracked) and the conflict update (existing
+   * row -> its current tracked state is left exactly as it was).
+   */
+  async getAvailableRepos(userId: string): Promise<AvailableRepo[]> {
     const identity = await this.getGithubIdentity(userId);
-    return this.githubReposService.listRepos(identity.accessToken as string);
+    const githubRepos = await this.githubReposService.listRepos(
+      identity.accessToken as string,
+    );
+    if (githubRepos.length === 0) {
+      return [];
+    }
+
+    const rows = await this.db
+      .insert(trackedRepos)
+      .values(
+        githubRepos.map((repo) => ({
+          userId,
+          provider: 'github' as const,
+          providerRepoId: String(repo.id),
+          fullName: repo.fullName,
+          private: repo.private,
+          htmlUrl: repo.htmlUrl,
+          description: repo.description,
+          language: repo.language,
+          defaultBranch: repo.defaultBranch,
+          stars: repo.stars,
+          forks: repo.forks,
+          openIssues: repo.openIssues,
+        })),
+      )
+      .onConflictDoUpdate({
+        target: [
+          trackedRepos.userId,
+          trackedRepos.provider,
+          trackedRepos.providerRepoId,
+        ],
+        set: {
+          fullName: sql`excluded.full_name`,
+          private: sql`excluded.private`,
+          htmlUrl: sql`excluded.html_url`,
+          description: sql`excluded.description`,
+          language: sql`excluded.language`,
+          defaultBranch: sql`excluded.default_branch`,
+          stars: sql`excluded.stars`,
+          forks: sql`excluded.forks`,
+          openIssues: sql`excluded.open_issues`,
+          syncedAt: sql`now()`,
+        },
+      })
+      .returning();
+
+    const rowByProviderId = new Map(rows.map((row) => [row.providerRepoId, row]));
+
+    return githubRepos.map((repo) => {
+      // Every repo just upserted above has a row here - the map lookup can
+      // only miss if GitHub returned a repo id absent from what we just sent.
+      const row = rowByProviderId.get(String(repo.id));
+      return {
+        ...repo,
+        repoId: row?.id ?? '',
+        trackedId: row?.trackedAt ? row.id : null,
+      };
+    });
   }
 
   async getTrackedRepos(userId: string): Promise<TrackedRepo[]> {
     const rows = await this.db.query.trackedRepos.findMany({
-      where: eq(trackedRepos.userId, userId),
+      where: and(
+        eq(trackedRepos.userId, userId),
+        isNotNull(trackedRepos.trackedAt),
+      ),
     });
     return rows.map(toTrackedRepo);
   }
@@ -112,24 +181,71 @@ export class ReposService {
       .sort((a, b) => b.committedAt.localeCompare(a.committedAt));
   }
 
-  async untrackRepo(userId: string, repoId: string): Promise<void> {
-    const deleted = await this.db
-      .delete(trackedRepos)
+  /**
+   * Marks a single already-synced repo (row created by getAvailableRepos) as
+   * tracked. Idempotent: re-tracking an already-tracked repo just refreshes
+   * trackedAt.
+   */
+  async trackRepo(userId: string, repoId: string): Promise<TrackedRepo> {
+    const updated = await this.db
+      .update(trackedRepos)
+      .set({ trackedAt: new Date() })
       .where(and(eq(trackedRepos.id, repoId), eq(trackedRepos.userId, userId)))
+      .returning();
+    if (updated.length === 0) {
+      throw new NotFoundException('Repository not found.');
+    }
+    return toTrackedRepo(updated[0]);
+  }
+
+  /**
+   * Nulls trackedAt rather than deleting the row, so the cached metadata (and
+   * eventually commit history) survives if the repo gets tracked again later.
+   */
+  async untrackRepo(userId: string, repoId: string): Promise<void> {
+    const updated = await this.db
+      .update(trackedRepos)
+      .set({ trackedAt: null })
+      .where(
+        and(
+          eq(trackedRepos.id, repoId),
+          eq(trackedRepos.userId, userId),
+          isNotNull(trackedRepos.trackedAt),
+        ),
+      )
       .returning({ id: trackedRepos.id });
-    if (deleted.length === 0) {
+    if (updated.length === 0) {
       throw new NotFoundException('Tracked repository not found.');
     }
   }
 
+  /**
+   * Replaces the full tracked set: upserts the desired repos with
+   * trackedAt=now() (setting it on the conflict path too, since a repo may
+   * already have a row from getAvailableRepos' metadata sync), and untracks
+   * (nulls trackedAt on, rather than deletes) anything currently tracked
+   * that isn't in the new desired set.
+   */
   async setTrackedRepos(
     userId: string,
     repos: SelectedRepo[],
   ): Promise<TrackedRepo[]> {
+    const desiredProviderIds = repos.map((repo) => String(repo.id));
+    const stillTrackedCondition =
+      desiredProviderIds.length > 0
+        ? notInArray(trackedRepos.providerRepoId, desiredProviderIds)
+        : undefined;
+
     await this.db
-      .delete(trackedRepos)
+      .update(trackedRepos)
+      .set({ trackedAt: null })
       .where(
-        and(eq(trackedRepos.userId, userId), eq(trackedRepos.provider, 'github')),
+        and(
+          eq(trackedRepos.userId, userId),
+          eq(trackedRepos.provider, 'github'),
+          isNotNull(trackedRepos.trackedAt),
+          stillTrackedCondition,
+        ),
       );
 
     if (repos.length === 0) {
@@ -152,8 +268,29 @@ export class ReposService {
           stars: repo.stars ?? 0,
           forks: repo.forks ?? 0,
           openIssues: repo.openIssues ?? 0,
+          trackedAt: new Date(),
         })),
       )
+      .onConflictDoUpdate({
+        target: [
+          trackedRepos.userId,
+          trackedRepos.provider,
+          trackedRepos.providerRepoId,
+        ],
+        set: {
+          fullName: sql`excluded.full_name`,
+          private: sql`excluded.private`,
+          htmlUrl: sql`excluded.html_url`,
+          description: sql`excluded.description`,
+          language: sql`excluded.language`,
+          defaultBranch: sql`excluded.default_branch`,
+          stars: sql`excluded.stars`,
+          forks: sql`excluded.forks`,
+          openIssues: sql`excluded.open_issues`,
+          trackedAt: sql`excluded.tracked_at`,
+          syncedAt: sql`now()`,
+        },
+      })
       .returning();
 
     return rows.map(toTrackedRepo);
@@ -199,6 +336,7 @@ function toTrackedRepo(row: typeof trackedRepos.$inferSelect): TrackedRepo {
     stars: row.stars,
     forks: row.forks,
     openIssues: row.openIssues,
+    trackedAt: row.trackedAt ? row.trackedAt.toISOString() : null,
     createdAt: row.createdAt.toISOString(),
   };
 }

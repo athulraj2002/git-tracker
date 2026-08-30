@@ -23,6 +23,7 @@ import type {
   SelectedRepoSchema,
   SetTrackedReposRequestSchema,
   TrackedRepoSchema,
+  AvailableRepoSchema,
   RepoCommitSchema,
   RepoDetailResponseSchema,
   RepoCommitWithContextSchema,
@@ -55,6 +56,7 @@ export type ConnectedIdentity = z.infer<typeof ConnectedIdentitySchema>;
 export type SelectedRepo = z.infer<typeof SelectedRepoSchema>;
 export type SetTrackedReposRequest = z.infer<typeof SetTrackedReposRequestSchema>;
 export type TrackedRepo = z.infer<typeof TrackedRepoSchema>;
+export type AvailableRepo = z.infer<typeof AvailableRepoSchema>;
 export type RepoCommit = z.infer<typeof RepoCommitSchema>;
 export type RepoDetailResponse = z.infer<typeof RepoDetailResponseSchema>;
 export type RepoCommitWithContext = z.infer<typeof RepoCommitWithContextSchema>;

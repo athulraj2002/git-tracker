@@ -43,6 +43,8 @@ export class RepoDetail {
   protected readonly dateRangeKey = signal<DateRangeKey>('30d');
   protected readonly isSettingsOpen = signal(false);
   protected readonly isInfoOpen = signal(false);
+  protected readonly isTracking = signal(false);
+  protected readonly trackErrorMessage = signal('');
   protected readonly isUntracking = signal(false);
   protected readonly untrackErrorMessage = signal('');
 
@@ -183,12 +185,32 @@ export class RepoDetail {
   }
 
   protected openSettings(): void {
+    this.trackErrorMessage.set('');
     this.untrackErrorMessage.set('');
     this.isSettingsOpen.set(true);
   }
 
   protected openInfo(): void {
     this.isInfoOpen.set(true);
+  }
+
+  protected async trackRepo(): Promise<void> {
+    const repoId = this.id();
+    if (!repoId) return;
+
+    this.isTracking.set(true);
+    this.trackErrorMessage.set('');
+    try {
+      await this.reposService.trackRepo(repoId);
+      this.detailResource.reload();
+      this.isSettingsOpen.set(false);
+    } catch (error) {
+      this.trackErrorMessage.set(
+        extractErrorMessage(error, 'Unable to track this repository.'),
+      );
+    } finally {
+      this.isTracking.set(false);
+    }
   }
 
   protected async untrackRepo(): Promise<void> {

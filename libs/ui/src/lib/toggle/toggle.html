@@ -1,0 +1,18 @@
+<button
+  type="button"
+  role="switch"
+  [attr.aria-checked]="checked()"
+  [attr.aria-label]="label()"
+  [disabled]="disabled()"
+  (click)="toggle()"
+  class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+  [class.bg-blue-600]="checked()"
+  [class.bg-gray-300]="!checked()"
+  [class.dark:bg-gray-700]="!checked()"
+>
+  <span
+    class="inline-block size-4 rounded-full bg-white transition-transform duration-200"
+    [class.translate-x-6]="checked()"
+    [class.translate-x-1]="!checked()"
+  ></span>
+</button>

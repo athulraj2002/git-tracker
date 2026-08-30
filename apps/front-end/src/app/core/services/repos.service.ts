@@ -1,7 +1,7 @@
 import { HttpClient, httpResource } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import type {
-  GithubRepo,
+  AvailableRepo,
   RepoCommit,
   RepoCommitWithContext,
   RepoDetailResponse,
@@ -15,8 +15,15 @@ import { Service, inject } from '@angular/core';
 export class ReposService {
   private readonly http = inject(HttpClient);
 
+  /**
+   * Every repo the user's GitHub token can see, each enriched with
+   * `trackedId` (the internal id if it's currently tracked, else null) -
+   * the backend upserts this same live listing into its repos table, so
+   * calling this also persists metadata for untracked repos instead of
+   * only ever fetching it on demand.
+   */
   availableRepos() {
-    return httpResource<GithubRepo[]>(() => '/api/repos/available', {
+    return httpResource<AvailableRepo[]>(() => '/api/repos/available', {
       defaultValue: [],
     });
   }
@@ -74,6 +81,10 @@ export class ReposService {
     return firstValueFrom(
       this.http.put<TrackedRepo[]>('/api/repos/tracked', { repos }),
     );
+  }
+
+  trackRepo(id: string): Promise<TrackedRepo> {
+    return firstValueFrom(this.http.put<TrackedRepo>(`/api/repos/tracked/${id}`, {}));
   }
 
   untrackRepo(id: string): Promise<void> {
