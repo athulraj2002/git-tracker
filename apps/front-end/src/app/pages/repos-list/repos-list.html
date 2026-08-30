@@ -10,9 +10,7 @@
   <p class="text-sm text-red-500">{{ errorMessage() }}</p>
   } @if (toggleErrorMessage()) {
   <p class="text-sm text-red-500">{{ toggleErrorMessage() }}</p>
-  }
-
-  @if (isLoading()) {
+  } @if (isLoading()) {
   <div class="rounded-lg border border-gray-800 bg-gray-900/40 flex flex-col">
     <div class="px-4 py-3 border-b border-gray-800">
       <lib-ui-skeleton class="h-4 w-32" />
@@ -37,16 +35,38 @@
     </p>
   </div>
   } @else {
-  <div class="rounded-lg border border-gray-800 bg-gray-900/40 overflow-x-auto">
+  <div
+    class="rounded-lg border border-gray-800 bg-gray-900/40 overflow-auto max-h-[calc(100vh-8.5rem)]"
+  >
     <table class="w-full text-sm">
       <thead>
         <tr class="text-left text-xs text-gray-500 border-b border-gray-800">
-          <th class="px-4 py-3 font-medium">Repository</th>
-          <th class="px-4 py-3 font-medium">Language</th>
-          <th class="px-4 py-3 font-medium text-right">Stars</th>
-          <th class="px-4 py-3 font-medium text-right">Forks</th>
-          <th class="px-4 py-3 font-medium text-right">Issues</th>
-          <th class="px-4 py-3 font-medium text-right">Tracking</th>
+          <th class="sticky top-0 z-10 bg-gray-900 px-4 py-3 font-medium">
+            Repository
+          </th>
+          <th class="sticky top-0 z-10 bg-gray-900 px-4 py-3 font-medium">
+            Language
+          </th>
+          <th
+            class="sticky top-0 z-10 bg-gray-900 px-4 py-3 font-medium text-right"
+          >
+            Stars
+          </th>
+          <th
+            class="sticky top-0 z-10 bg-gray-900 px-4 py-3 font-medium text-right"
+          >
+            Forks
+          </th>
+          <th
+            class="sticky top-0 z-10 bg-gray-900 px-4 py-3 font-medium text-right"
+          >
+            Issues
+          </th>
+          <th
+            class="sticky top-0 z-10 bg-gray-900 px-4 py-3 font-medium text-right"
+          >
+            Tracking
+          </th>
         </tr>
       </thead>
       <tbody>
