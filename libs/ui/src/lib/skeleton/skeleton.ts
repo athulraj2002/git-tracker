@@ -17,6 +17,6 @@ export class Skeleton {
   class = input<string>('');
 
   classes = computed(() =>
-    ['animate-pulse rounded-md bg-gray-800', this.class()].join(' '),
+    ['animate-pulse rounded-md bg-gray-200 dark:bg-gray-800', this.class()].join(' '),
   );
 }

@@ -7,12 +7,12 @@
   (close)="onNativeClose()"
 >
   <div
-    class="flex items-center justify-between gap-3 px-4 py-3 border-b border-gray-800"
+    class="flex items-center justify-between gap-3 px-4 py-3 border-b border-gray-200 dark:border-gray-800"
   >
-    <p class="text-sm font-medium text-white">{{ title() }}</p>
+    <p class="text-sm font-medium text-gray-900 dark:text-white">{{ title() }}</p>
     <button
       type="button"
-      class="text-gray-500 hover:text-white transition-colors shrink-0 cursor-pointer"
+      class="text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors shrink-0 cursor-pointer"
       (click)="requestClose()"
       aria-label="Close"
     >

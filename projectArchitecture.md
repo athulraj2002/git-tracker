@@ -73,8 +73,8 @@ libs/
     types/                    (zod-inferred types + hand-written shared FE types)
     helpers/                  (framework-agnostic pure helper functions)
   ui/                         (shared Angular UI components: Button,
-                                ButtonGroup, Checkbox, InputField, RadioGroup,
-                                Select, Skeleton, Spinner)
+                                ButtonGroup, Checkbox, Dialog, InputField,
+                                RadioGroup, Select, Skeleton, Spinner, Toggle)
 ```
 
 Note: the original plan called for separate `libs/github`, `libs/analytics`,
@@ -206,11 +206,27 @@ yet, only commit data fetched on demand.
 
 ### Backend: Repos Module (`apps/api/src/app/modules/repos`)
 
-- `GET /repos/available` — live GitHub repo list for the signed-in user
-- `GET /repos/tracked`, `PUT /repos/tracked` — the user's tracked-repo
-  selection, persisted in `tracked_repos`
-- `GET /repos/tracked/:id` — one tracked repo + its 10 most recent commits
-- `GET /repos/commits?since=` — commits aggregated across every tracked
+- `GET /repos/available` — the signed-in user's live GitHub repo list.
+  Every call **upserts** the listing into `tracked_repos` (matched on
+  `userId` + `provider` + `providerRepoId`), so metadata for repos the
+  user hasn't tracked yet is persisted too, not just fetched-and-discarded.
+  The upsert never touches `tracked_at` — tracking state is only ever
+  changed by the endpoints below. Response includes `repoId` (that row's
+  internal id, always present) and `trackedId` (same id, but only if
+  `tracked_at` is set — `null` otherwise).
+- `GET /repos/tracked` — only rows with `tracked_at` set.
+- `PUT /repos/tracked` — replace the full tracked set in one call (bulk
+  onboarding selection); untracks anything not in the new set rather than
+  deleting rows.
+- `PUT /repos/tracked/:id` — track a single repo by its internal id
+  (idempotent; sets `tracked_at = now()`).
+- `DELETE /repos/tracked/:id` — untrack a single repo. Nulls `tracked_at`
+  rather than deleting the row, so its cached metadata survives being
+  untracked and doesn't need re-fetching if tracked again later.
+- `GET /repos/tracked/:id` — one repo's detail (tracked or not, as long as
+  it's been synced via `GET /repos/available` at least once) + its 10 most
+  recent commits.
+- `GET /repos/commits?since=` — commits aggregated across every **tracked**
   repo in parallel (a single repo failing doesn't fail the whole request).
   `since` is a plain date (`YYYY-MM-DD`, not a full datetime) — the frontend
   deliberately keeps it stable to the day so the response cache (see Tech
@@ -218,8 +234,14 @@ yet, only commit data fetched on demand.
 
 ### Backend: Database Module (`apps/api/src/app/modules/database`)
 
-- Drizzle schema: `users`, `user_identities`, `tracked_repos`
-- No commit/PR/metrics tables — GitHub data is fetched live, not cached
+- Drizzle schema: `users`, `user_identities`, `tracked_repos`.
+- `tracked_repos` is a **unified table**, not just "tracked" repos despite
+  the name: it holds a row for every repo the user's GitHub token can see,
+  once synced. `tracked_at` (nullable) is the only column tracking state —
+  `null` = discovered but not tracked, set = actively tracked. `synced_at`
+  records the last metadata refresh. This means repo **metadata** is
+  cached server-side; commit data is still fetched live from GitHub on
+  every request, no commit/PR/metrics tables exist yet.
 
 ### Frontend pages
 
@@ -229,8 +251,16 @@ yet, only commit data fetched on demand.
 - `dashboard` — stat tiles + filter bar (date range / repo / contributor,
   using `lib-ui-select`) + three stacked ApexCharts; the contribution
   activity chart has a Bars/Heatmap toggle (`lib-ui-button-group`)
-- `repos-list` / `repo-detail` — tracked repos and their recent commits
-- `settings` — profile info, connected accounts, manage tracked repos
+- `repos-list` — table of **every** repo the user's GitHub token can see
+  (not just tracked ones), with an inline `lib-ui-toggle` in a "Tracking"
+  column to track/untrack a repo without leaving the page; every row links
+  to `repo-detail`, tracked or not
+- `repo-detail` — one repo's commits + contributor chart, and a settings
+  dialog that shows a "Track" action for an untracked repo or "Untrack"
+  for a tracked one
+- `settings` — profile info and connected accounts only; tracked-repo
+  management used to live here and was moved to `repos-list` so there's a
+  single place to manage tracking
 
 ---
 
@@ -327,7 +357,10 @@ yet, only commit data fetched on demand.
 ### 🔹 Repos
 
 - ✅ Repo fetch (GitHub)
-- ✅ Tracked-repo CRUD
+- ✅ Tracked-repo CRUD (bulk replace + single track/untrack)
+- ✅ Persist metadata for untracked repos too (unified `tracked_repos`
+  table with nullable `tracked_at`), so repo detail is viewable and
+  survives untracking without a GitHub re-fetch
 - ✅ Commits API (per-repo + aggregated)
 - [ ] PR API
 - [ ] Webhooks (currently pull-based only)
@@ -353,9 +386,11 @@ yet, only commit data fetched on demand.
 
 - Zod = contract + validation (critical) — keep it that way
 - Avoid DTO duplication — use `@org/types`
-- GitHub data is fetched **live on every request**, not cached or
-  webhook-driven yet — expect latency proportional to tracked-repo count,
-  and revisit before this needs to scale
+- Repo **metadata** (name, stars, language, etc.) is cached server-side via
+  upsert into `tracked_repos`; commit data is still fetched **live on
+  every request**, not cached or webhook-driven yet — expect latency
+  proportional to tracked-repo count for commit-heavy views, and revisit
+  before this needs to scale
 - Focus on team insights, not individual surveillance
 
 ---

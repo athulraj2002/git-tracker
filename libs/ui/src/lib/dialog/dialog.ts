@@ -22,7 +22,8 @@ export class Dialog {
 
   protected readonly panelClasses = computed(() =>
     [
-      'm-auto p-0 bg-gray-900 text-white border border-gray-800 rounded-lg shadow-xl',
+      'm-auto p-0 bg-white dark:bg-gray-900 text-gray-900 dark:text-white',
+      'border border-gray-200 dark:border-gray-800 rounded-lg shadow-xl',
       'w-full max-h-[85vh] overflow-y-auto',
       '[&::backdrop]:bg-black/60',
       this.class() || 'max-w-md',

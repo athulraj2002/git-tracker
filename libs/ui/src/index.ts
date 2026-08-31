@@ -3,6 +3,7 @@ export * from './lib/button-group/button-group';
 export * from './lib/spinner/spinner';
 export * from './lib/input/input';
 export * from './lib/checkbox/checkbox';
+export * from './lib/date-range-picker/date-range-picker';
 export * from './lib/dialog/dialog';
 export * from './lib/radio-group/radio-group';
 export * from './lib/select/select';

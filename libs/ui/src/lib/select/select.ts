@@ -21,8 +21,9 @@ export class Select {
 
   classes = computed(() =>
     [
-      'bg-gray-900 border border-gray-800 rounded-lg text-xs text-gray-300',
-      'px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-gray-600',
+      'bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-800',
+      'rounded-lg text-xs text-gray-700 dark:text-gray-300',
+      'px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-gray-400 dark:focus:ring-gray-600',
       this.class(),
     ].join(' '),
   );
