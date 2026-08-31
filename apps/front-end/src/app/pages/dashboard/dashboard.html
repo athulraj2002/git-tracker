@@ -57,11 +57,10 @@
       <p class="text-sm font-medium text-white">Contribution activity</p>
 
       <div class="flex items-center gap-2 flex-wrap">
-        <lib-ui-select
-          [options]="dateRangeSelectOptions"
-          [value]="dateRangeKey()"
+        <lib-ui-date-range-picker
+          [value]="dateRange()"
           (valueChange)="setDateRange($event)"
-        ></lib-ui-select>
+        ></lib-ui-date-range-picker>
 
         <lib-ui-select
           [options]="repoFilterOptions()"

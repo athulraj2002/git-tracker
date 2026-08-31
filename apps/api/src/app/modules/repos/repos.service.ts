@@ -130,6 +130,7 @@ export class ReposService {
     userId: string,
     repoId: string,
     since?: string,
+    until?: string,
   ): Promise<RepoCommit[]> {
     const row = await this.findTrackedRepoRow(userId, repoId);
     const identity = await this.getGithubIdentity(userId);
@@ -140,13 +141,14 @@ export class ReposService {
     return this.githubReposService.getCommits(
       identity.accessToken as string,
       row.fullName,
-      { since, perPage: 100, maxPages: 3 },
+      { since, until, perPage: 100, maxPages: 3 },
     );
   }
 
   async getContributionActivity(
     userId: string,
     since?: string,
+    until?: string,
   ): Promise<RepoCommitWithContext[]> {
     const repos = await this.getTrackedRepos(userId);
     if (repos.length === 0) {
@@ -162,7 +164,7 @@ export class ReposService {
           const commits = await this.githubReposService.getCommits(
             accessToken,
             repo.fullName,
-            { since, perPage: 100 },
+            { since, until, perPage: 100 },
           );
           return commits.map((commit) => ({
             ...commit,

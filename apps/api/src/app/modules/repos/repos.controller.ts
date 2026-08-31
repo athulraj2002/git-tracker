@@ -36,13 +36,14 @@ export class ReposController {
   }
 
   @Get('tracked/:id/commits')
-  @ApiOperation({ summary: 'List commits for a tracked repository, optionally since a date' })
+  @ApiOperation({ summary: 'List commits for a tracked repository, optionally within a date range' })
   getTrackedCommits(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Query('since') since?: string,
+    @Query('until') until?: string,
   ) {
-    return this.reposService.getRepoCommits(user.sub, id, since);
+    return this.reposService.getRepoCommits(user.sub, id, since, until);
   }
 
   @Get('commits')
@@ -52,8 +53,9 @@ export class ReposController {
   getCommits(
     @CurrentUser() user: AuthenticatedUser,
     @Query('since') since?: string,
+    @Query('until') until?: string,
   ) {
-    return this.reposService.getContributionActivity(user.sub, since);
+    return this.reposService.getContributionActivity(user.sub, since, until);
   }
 
   @Put('tracked')

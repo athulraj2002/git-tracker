@@ -123,11 +123,10 @@
 
   <div class="flex items-center justify-between flex-wrap gap-3">
     <p class="text-sm font-medium text-white">Activity</p>
-    <lib-ui-select
-      [options]="dateRangeSelectOptions"
-      [value]="dateRangeKey()"
+    <lib-ui-date-range-picker
+      [value]="dateRange()"
       (valueChange)="setDateRange($event)"
-    ></lib-ui-select>
+    ></lib-ui-date-range-picker>
   </div>
 
   @if (commitsErrorMessage()) {

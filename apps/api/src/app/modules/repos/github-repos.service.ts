@@ -52,7 +52,7 @@ export class GithubReposService {
   async getCommits(
     accessToken: string,
     fullName: string,
-    options?: { since?: string; perPage?: number; maxPages?: number },
+    options?: { since?: string; until?: string; perPage?: number; maxPages?: number },
   ): Promise<RepoCommit[]> {
     const perPage = options?.perPage ?? 10;
     const maxPages = options?.maxPages ?? 1;
@@ -65,6 +65,12 @@ export class GithubReposService {
       });
       if (options?.since) {
         params.set('since', options.since);
+      }
+      if (options?.until) {
+        // A plain date is midnight UTC, which would exclude same-day commits
+        // made after that instant - push it to the end of that day instead,
+        // so the end date is inclusive the way a human picking it would expect.
+        params.set('until', `${options.until}T23:59:59Z`);
       }
 
       const response = await fetch(

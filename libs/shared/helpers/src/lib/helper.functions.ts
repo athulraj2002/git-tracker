@@ -1,10 +1,14 @@
-import type { DateRangeKey } from '@org/types';
-
 export type Granularity = 'day' | 'week' | 'month';
 
-export function granularityFor(range: DateRangeKey): Granularity {
-  if (range === '365d') return 'month';
-  if (range === '90d') return 'week';
+/**
+ * Picks a chart bucket size from the selected range's span in days, so an
+ * arbitrary custom range (not just a fixed preset) still buckets sensibly -
+ * a multi-year range in daily buckets would be unreadable, a 2-week range in
+ * monthly buckets would be a single bar.
+ */
+export function granularityFor(spanDays: number): Granularity {
+  if (spanDays > 180) return 'month';
+  if (spanDays > 31) return 'week';
   return 'day';
 }
 

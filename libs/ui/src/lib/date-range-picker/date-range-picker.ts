@@ -6,6 +6,7 @@ import {
   inject,
   model,
   signal,
+  viewChild,
 } from '@angular/core';
 
 /**
@@ -19,9 +20,11 @@ export interface DateRange {
   end: string;
 }
 
-interface CalendarDay {
-  date: Date;
-  inMonth: boolean;
+// `date` is null for a blank leading/trailing cell - this calendar only
+// ever shows days that belong to the month it's titled after, never a
+// neighboring month's dates, so those cells render empty instead.
+interface CalendarCell {
+  date: Date | null;
 }
 
 // Internal-only: calendar math needs real Date objects, but every path out
@@ -97,15 +100,35 @@ export function fromDateKey(key: string): Date {
   return new Date(year, month - 1, day);
 }
 
-// Always 42 cells (6 full Mon-Sun weeks) so the grid height never shifts
-// between months, and leading/trailing days from adjacent months fill the
-// gaps instead of leaving blanks.
-function buildMonthGrid(month: Date): CalendarDay[] {
-  const gridStart = startOfWeek(startOfMonth(month));
-  return Array.from({ length: 42 }, (_, i) => {
-    const date = addDays(gridStart, i);
-    return { date, inMonth: date.getMonth() === month.getMonth() };
-  });
+// Only this month's own days - leading/trailing cells before day 1 and
+// after the last day are blank (`date: null`), never another month's date.
+// The grid still pads out to a whole number of weeks so every row has 7
+// cells, but never adds a 6th row just to carry more blanks.
+function buildMonthGrid(month: Date): CalendarCell[] {
+  const leadingBlanks = mondayIndex(startOfMonth(month));
+  const daysInMonth = endOfMonth(month).getDate();
+
+  const cells: CalendarCell[] = [];
+  for (let i = 0; i < leadingBlanks; i++) {
+    cells.push({ date: null });
+  }
+  for (let day = 1; day <= daysInMonth; day++) {
+    cells.push({ date: new Date(month.getFullYear(), month.getMonth(), day) });
+  }
+  while (cells.length % 7 !== 0) {
+    cells.push({ date: null });
+  }
+  return cells;
+}
+
+// Pads a grid with trailing blank rows so both calendars in the panel are
+// the same height even when their months span a different number of weeks -
+// otherwise the two would end at different heights, since a blank cell
+// never borrows a neighboring month's date to fill the gap.
+function padToRows(cells: CalendarCell[], rows: number): CalendarCell[] {
+  const target = rows * 7;
+  if (cells.length >= target) return cells;
+  return [...cells, ...Array.from({ length: target - cells.length }, () => ({ date: null }))];
 }
 
 function buildPresets(today: Date): Preset[] {
@@ -139,12 +162,13 @@ function buildPresets(today: Date): Preset[] {
 /**
  * A dual-calendar date-range picker: a trigger button that opens a panel
  * with quick-select presets on the left and two Mon-Sun month grids on the
- * right, always shown side by side (no single-calendar mode). Picking a
- * custom range is click-start, then click-end in either calendar - the
- * second click can land before the first, and the range is normalized so
- * `start` is always the earlier date. The picker is date-only throughout -
- * there's no time-of-day to set, and `value` never carries one (see
- * `DateRange`).
+ * right, always shown side by side (no single-calendar mode). Each calendar
+ * only ever shows its own month's days - no neighboring-month dates fill
+ * the leading/trailing gaps, those cells are left blank. Picking a custom
+ * range is click-start, then click-end in either calendar - the second
+ * click can land before the first, and the range is normalized so `start`
+ * is always the earlier date. The picker is date-only throughout - there's
+ * no time-of-day to set, and `value` never carries one (see `DateRange`).
  */
 @Component({
   selector: 'lib-ui-date-range-picker',
@@ -155,27 +179,53 @@ export class DateRangePicker {
 
   protected readonly isOpen = signal(false);
   protected readonly leftMonth = signal(startOfMonth(new Date()));
+  // Independently navigable, not just leftMonth + 1 - each calendar has its
+  // own prev/next arrows (see nextLeftMonth/previousRightMonth), so the two
+  // can drift further apart than one month. They can never become the same
+  // month or cross over, enforced by disabling the inward-facing arrow once
+  // they're adjacent (see isAdjacent).
+  protected readonly rightMonth = signal(addMonths(new Date(), 1));
   // Set while the user is picking a custom range: the first click landed
   // here and we're waiting for the second. Null the rest of the time.
   protected readonly pendingStart = signal<Date | null>(null);
   protected readonly hoverDate = signal<Date | null>(null);
+  // Which edge the panel is anchored to - recomputed on open (see
+  // togglePanel) from the trigger's actual position, since anchoring to a
+  // fixed side overflows the viewport whenever the trigger sits close to
+  // that edge (a right-anchored panel clips left-of-screen triggers, a
+  // left-anchored one clips right-of-screen triggers).
+  protected readonly alignRight = signal(false);
   protected readonly dayLabels = DAY_LABELS;
 
   private readonly elementRef = inject(ElementRef<HTMLElement>);
+  private readonly panelRef = viewChild<ElementRef<HTMLElement>>('panel');
   private readonly today = startOfDay(new Date());
   protected readonly presets = buildPresets(this.today);
 
-  protected readonly rightMonth = computed(() => addMonths(this.leftMonth(), 1));
   protected readonly leftMonthLabel = computed(() => this.formatMonth(this.leftMonth()));
   protected readonly rightMonthLabel = computed(() => this.formatMonth(this.rightMonth()));
-  protected readonly leftDays = computed(() => buildMonthGrid(this.leftMonth()));
-  protected readonly rightDays = computed(() => buildMonthGrid(this.rightMonth()));
+  // True once the two calendars are exactly one month apart - the inward
+  // arrows (left's next, right's prev) are disabled in this state, since
+  // moving either would make the two calendars show the same month.
+  protected readonly isAdjacent = computed(() => {
+    const left = this.leftMonth();
+    const right = this.rightMonth();
+    const monthsApart =
+      (right.getFullYear() - left.getFullYear()) * 12 + (right.getMonth() - left.getMonth());
+    return monthsApart <= 1;
+  });
+  private readonly rawLeftDays = computed(() => buildMonthGrid(this.leftMonth()));
+  private readonly rawRightDays = computed(() => buildMonthGrid(this.rightMonth()));
+  private readonly rowCount = computed(() =>
+    Math.max(this.rawLeftDays().length, this.rawRightDays().length) / 7,
+  );
+  protected readonly leftDays = computed(() => padToRows(this.rawLeftDays(), this.rowCount()));
+  protected readonly rightDays = computed(() => padToRows(this.rawRightDays(), this.rowCount()));
   // The committed `value`, parsed back into Dates for calendar math/display.
   private readonly valueAsDates = computed<InternalRange>(() => ({
     start: fromDateKey(this.value().start),
     end: fromDateKey(this.value().end),
   }));
-  protected readonly triggerLabel = computed(() => this.formatRange(this.valueAsDates()));
   protected readonly activePresetLabel = computed(() => {
     const current = this.value();
     const match = this.presets.find((preset) => {
@@ -184,6 +234,13 @@ export class DateRangePicker {
     });
     return match?.label ?? null;
   });
+  // Show the preset's own name ("Last month") when the value exactly
+  // matches one, since that reads better than its expanded date span - fall
+  // back to the actual range once it's a custom selection that doesn't
+  // correspond to any preset.
+  protected readonly triggerLabel = computed(
+    () => this.activePresetLabel() ?? this.formatRange(this.valueAsDates()),
+  );
   // What to actually paint as selected: the committed value normally, or a
   // live preview of {pendingStart, hoverDate} while picking a custom range.
   protected readonly displayRange = computed<InternalRange>(() => {
@@ -212,44 +269,64 @@ export class DateRangePicker {
       this.isOpen.set(false);
       return;
     }
-    this.leftMonth.set(startOfMonth(this.valueAsDates().start));
+    const anchor = startOfMonth(this.valueAsDates().start);
+    this.leftMonth.set(anchor);
+    this.rightMonth.set(addMonths(anchor, 1));
     this.pendingStart.set(null);
     this.hoverDate.set(null);
     this.isOpen.set(true);
+    // The panel doesn't exist in the DOM until this render commits - measure
+    // its actual width once the browser has laid it out (rAF fires after
+    // paint) rather than guessing a fixed width up front.
+    requestAnimationFrame(() => this.positionPanel());
   }
 
   protected selectPreset(preset: Preset): void {
     const range = preset.range();
     this.value.set({ start: toDateKey(range.start), end: toDateKey(range.end) });
-    this.leftMonth.set(startOfMonth(range.start));
+    const anchor = startOfMonth(range.start);
+    this.leftMonth.set(anchor);
+    this.rightMonth.set(addMonths(anchor, 1));
     this.pendingStart.set(null);
     this.hoverDate.set(null);
   }
 
-  protected selectDay(day: CalendarDay): void {
+  protected selectDay(day: CalendarCell): void {
+    if (!day.date) return;
+    const clicked = day.date;
     const start = this.pendingStart();
     if (!start) {
-      this.pendingStart.set(day.date);
+      this.pendingStart.set(clicked);
       return;
     }
-    const range = day.date < start ? { start: day.date, end: start } : { start, end: day.date };
+    const range = clicked < start ? { start: clicked, end: start } : { start, end: clicked };
     this.value.set({ start: toDateKey(range.start), end: toDateKey(range.end) });
     this.pendingStart.set(null);
     this.hoverDate.set(null);
   }
 
-  protected hoverDay(day: CalendarDay): void {
-    if (this.pendingStart()) {
+  protected hoverDay(day: CalendarCell): void {
+    if (day.date && this.pendingStart()) {
       this.hoverDate.set(day.date);
     }
   }
 
-  protected goToPreviousMonth(): void {
+  protected previousLeftMonth(): void {
     this.leftMonth.update((month) => addMonths(month, -1));
   }
 
-  protected goToNextMonth(): void {
+  protected nextLeftMonth(): void {
+    if (this.isAdjacent()) return;
     this.leftMonth.update((month) => addMonths(month, 1));
+  }
+
+  protected previousRightMonth(): void {
+    if (this.isAdjacent()) return;
+    this.rightMonth.update((month) => addMonths(month, -1));
+  }
+
+  protected nextRightMonth(): void {
+    this.rightMonth.update((month) => addMonths(month, 1));
   }
 
   protected isRangeStart(date: Date): boolean {
@@ -267,6 +344,21 @@ export class DateRangePicker {
 
   protected isToday(date: Date): boolean {
     return sameDay(date, this.today);
+  }
+
+  private positionPanel(): void {
+    const panelEl = this.panelRef()?.nativeElement;
+    if (!panelEl) return;
+    const hostRect = this.elementRef.nativeElement.getBoundingClientRect();
+    const panelWidth = panelEl.getBoundingClientRect().width;
+    // Anchoring to the left (the default) overflows the viewport if the
+    // panel would extend past the right edge from here; anchoring right
+    // instead would overflow the left edge if the trigger can't fit the
+    // panel on either side without clipping, prefer left (matches the
+    // window's own horizontal scrollbar direction).
+    const overflowsRight = hostRect.left + panelWidth > window.innerWidth;
+    const fitsOnRight = hostRect.right - panelWidth >= 0;
+    this.alignRight.set(overflowsRight && fitsOnRight);
   }
 
   private formatMonth(date: Date): string {

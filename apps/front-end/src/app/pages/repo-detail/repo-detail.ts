@@ -2,10 +2,10 @@ import { Component, computed, inject, input, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { ChartComponent, type ApexAxisChartSeries, type ApexChart, type ApexXAxis } from 'ng-apexcharts';
-import { Button, Dialog, Select, Skeleton, type SelectOption } from '@org/ui';
-import type { ContributorStat, DateRangeKey } from '@org/types';
+import { Button, DateRangePicker, Dialog, Skeleton, type DateRange } from '@org/ui';
+import type { ContributorStat } from '@org/types';
 import { bucketFor, extractErrorMessage } from '@org/helpers';
-import { ACCENT_COLOR, DATE_RANGE_OPTIONS, RANGE_DAYS } from '../../common/data';
+import { ACCENT_COLOR, defaultDateRange } from '../../common/data';
 import {
   ACTIVITY_CHART,
   ACTIVITY_PLOT_OPTIONS,
@@ -28,7 +28,7 @@ const TOP_CONTRIBUTOR_COUNT = 6;
 
 @Component({
   selector: 'app-repo-detail',
-  imports: [RouterLink, DatePipe, Skeleton, ChartComponent, Select, Dialog, Button],
+  imports: [RouterLink, DatePipe, Skeleton, ChartComponent, DateRangePicker, Dialog, Button],
   templateUrl: './repo-detail.html',
 })
 export class RepoDetail {
@@ -37,10 +37,7 @@ export class RepoDetail {
   // ---------------------------------------------------------------------
 
   protected readonly accentColor = ACCENT_COLOR;
-  protected readonly dateRangeSelectOptions: SelectOption[] = DATE_RANGE_OPTIONS.map(
-    (option) => ({ value: option.key, label: option.label }),
-  );
-  protected readonly dateRangeKey = signal<DateRangeKey>('30d');
+  protected readonly dateRange = signal<DateRange>(defaultDateRange());
   protected readonly isSettingsOpen = signal(false);
   protected readonly isInfoOpen = signal(false);
   protected readonly isTracking = signal(false);
@@ -57,6 +54,7 @@ export class RepoDetail {
   private readonly commitsResource = this.reposService.repoCommits(
     this.id,
     () => this.since(),
+    () => this.until(),
   );
   protected readonly commits = this.commitsResource.value;
 
@@ -76,11 +74,8 @@ export class RepoDetail {
   // Computed signals
   // ---------------------------------------------------------------------
 
-  private readonly since = computed(() => {
-    const date = new Date();
-    date.setDate(date.getDate() - RANGE_DAYS[this.dateRangeKey()]);
-    return date.toISOString().slice(0, 10);
-  });
+  private readonly since = computed(() => this.dateRange().start);
+  private readonly until = computed(() => this.dateRange().end);
 
   protected readonly repo = computed(() => this.detailResource.value()?.repo ?? null);
   protected readonly isLoading = computed(() => {
@@ -180,8 +175,8 @@ export class RepoDetail {
   // Private functions
   // ---------------------------------------------------------------------
 
-  protected setDateRange(key: string): void {
-    this.dateRangeKey.set(key as DateRangeKey);
+  protected setDateRange(range: DateRange): void {
+    this.dateRange.set(range);
   }
 
   protected openSettings(): void {

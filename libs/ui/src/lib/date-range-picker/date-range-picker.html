@@ -24,7 +24,10 @@
 
   @if (isOpen()) {
   <div
-    class="absolute z-20 top-full mt-2 left-0 flex bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg shadow-xl overflow-hidden"
+    #panel
+    class="absolute z-20 top-full mt-2 flex bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg shadow-xl overflow-hidden"
+    [class.left-0]="!alignRight()"
+    [class.right-0]="alignRight()"
   >
     <div class="w-44 shrink-0 border-r border-gray-200 dark:border-gray-800 py-2 flex flex-col">
       @for (preset of presets; track preset.label) {
@@ -49,8 +52,8 @@
         <div class="flex items-center justify-between mb-3">
           <button
             type="button"
-            class="text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors cursor-pointer"
-            (click)="goToPreviousMonth()"
+            class="text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed disabled:pointer-events-none"
+            (click)="previousLeftMonth()"
             aria-label="Previous month"
           >
             <svg
@@ -67,44 +70,11 @@
             </svg>
           </button>
           <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ leftMonthLabel() }}</p>
-          <span class="size-4"></span>
-        </div>
-        <div class="grid grid-cols-7 gap-y-1 text-center">
-          @for (label of dayLabels; track label) {
-          <span class="text-xs text-gray-500 font-medium py-1">{{ label }}</span>
-          }
-          @for (day of leftDays(); track day.date.getTime()) {
           <button
             type="button"
-            class="text-xs h-8 w-8 mx-auto rounded-full transition-colors cursor-pointer flex items-center justify-center"
-            [class.text-gray-300]="!day.inMonth"
-            [class.dark:text-gray-700]="!day.inMonth"
-            [class.text-gray-700]="day.inMonth && !isRangeStart(day.date) && !isRangeEnd(day.date)"
-            [class.dark:text-gray-200]="day.inMonth && !isRangeStart(day.date) && !isRangeEnd(day.date)"
-            [class.bg-blue-600]="isRangeStart(day.date) || isRangeEnd(day.date)"
-            [class.text-white]="isRangeStart(day.date) || isRangeEnd(day.date)"
-            [class.bg-gray-100]="isInRange(day.date)"
-            [class.dark:bg-gray-800]="isInRange(day.date)"
-            [class.ring-1]="isToday(day.date) && !isRangeStart(day.date) && !isRangeEnd(day.date)"
-            [class.ring-gray-300]="isToday(day.date) && !isRangeStart(day.date) && !isRangeEnd(day.date)"
-            [class.dark:ring-gray-600]="isToday(day.date) && !isRangeStart(day.date) && !isRangeEnd(day.date)"
-            (click)="selectDay(day)"
-            (mouseenter)="hoverDay(day)"
-          >
-            {{ day.date.getDate() }}
-          </button>
-          }
-        </div>
-      </div>
-
-      <div class="w-64">
-        <div class="flex items-center justify-between mb-3">
-          <span class="size-4"></span>
-          <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ rightMonthLabel() }}</p>
-          <button
-            type="button"
-            class="text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors cursor-pointer"
-            (click)="goToNextMonth()"
+            class="text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed disabled:pointer-events-none"
+            [disabled]="isAdjacent()"
+            (click)="nextLeftMonth()"
             aria-label="Next month"
           >
             <svg
@@ -125,14 +95,13 @@
           @for (label of dayLabels; track label) {
           <span class="text-xs text-gray-500 font-medium py-1">{{ label }}</span>
           }
-          @for (day of rightDays(); track day.date.getTime()) {
+          @for (day of leftDays(); track $index) {
+          @if (day.date) {
           <button
             type="button"
             class="text-xs h-8 w-8 mx-auto rounded-full transition-colors cursor-pointer flex items-center justify-center"
-            [class.text-gray-300]="!day.inMonth"
-            [class.dark:text-gray-700]="!day.inMonth"
-            [class.text-gray-700]="day.inMonth && !isRangeStart(day.date) && !isRangeEnd(day.date)"
-            [class.dark:text-gray-200]="day.inMonth && !isRangeStart(day.date) && !isRangeEnd(day.date)"
+            [class.text-gray-700]="!isRangeStart(day.date) && !isRangeEnd(day.date)"
+            [class.dark:text-gray-200]="!isRangeStart(day.date) && !isRangeEnd(day.date)"
             [class.bg-blue-600]="isRangeStart(day.date) || isRangeEnd(day.date)"
             [class.text-white]="isRangeStart(day.date) || isRangeEnd(day.date)"
             [class.bg-gray-100]="isInRange(day.date)"
@@ -145,6 +114,82 @@
           >
             {{ day.date.getDate() }}
           </button>
+          } @else {
+          <span class="h-8 w-8"></span>
+          }
+          }
+        </div>
+      </div>
+
+      <div class="w-64">
+        <div class="flex items-center justify-between mb-3">
+          <button
+            type="button"
+            class="text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed disabled:pointer-events-none"
+            [disabled]="isAdjacent()"
+            (click)="previousRightMonth()"
+            aria-label="Previous month"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="size-4"
+            >
+              <path d="M15 18l-6-6 6-6" />
+            </svg>
+          </button>
+          <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ rightMonthLabel() }}</p>
+          <button
+            type="button"
+            class="text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed disabled:pointer-events-none"
+            (click)="nextRightMonth()"
+            aria-label="Next month"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="size-4"
+            >
+              <path d="M9 18l6-6-6-6" />
+            </svg>
+          </button>
+        </div>
+        <div class="grid grid-cols-7 gap-y-1 text-center">
+          @for (label of dayLabels; track label) {
+          <span class="text-xs text-gray-500 font-medium py-1">{{ label }}</span>
+          }
+          @for (day of rightDays(); track $index) {
+          @if (day.date) {
+          <button
+            type="button"
+            class="text-xs h-8 w-8 mx-auto rounded-full transition-colors cursor-pointer flex items-center justify-center"
+            [class.text-gray-700]="!isRangeStart(day.date) && !isRangeEnd(day.date)"
+            [class.dark:text-gray-200]="!isRangeStart(day.date) && !isRangeEnd(day.date)"
+            [class.bg-blue-600]="isRangeStart(day.date) || isRangeEnd(day.date)"
+            [class.text-white]="isRangeStart(day.date) || isRangeEnd(day.date)"
+            [class.bg-gray-100]="isInRange(day.date)"
+            [class.dark:bg-gray-800]="isInRange(day.date)"
+            [class.ring-1]="isToday(day.date) && !isRangeStart(day.date) && !isRangeEnd(day.date)"
+            [class.ring-gray-300]="isToday(day.date) && !isRangeStart(day.date) && !isRangeEnd(day.date)"
+            [class.dark:ring-gray-600]="isToday(day.date) && !isRangeStart(day.date) && !isRangeEnd(day.date)"
+            (click)="selectDay(day)"
+            (mouseenter)="hoverDay(day)"
+          >
+            {{ day.date.getDate() }}
+          </button>
+          } @else {
+          <span class="h-8 w-8"></span>
+          }
           }
         </div>
       </div>

@@ -2,15 +2,23 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { ChartComponent, type ApexAxisChartSeries, type ApexChart, type ApexXAxis } from 'ng-apexcharts';
 import type { ApexTooltipCustomOpts } from 'apexcharts';
-import { ButtonGroup, Select, Skeleton, type ButtonGroupOption, type SelectOption } from '@org/ui';
+import {
+  ButtonGroup,
+  DateRangePicker,
+  Select,
+  Skeleton,
+  fromDateKey,
+  type ButtonGroupOption,
+  type DateRange,
+  type SelectOption,
+} from '@org/ui';
 import type {
   ContributorStat,
-  DateRangeKey,
   RepoCommitWithContext,
   RepoContribution,
 } from '@org/types';
 import { bucketFor, extractErrorMessage, granularityFor, localDateKey } from '@org/helpers';
-import { DATE_RANGE_OPTIONS, RANGE_DAYS } from '../../common/data';
+import { defaultDateRange } from '../../common/data';
 import { buildStackedSeries } from '../../common/chart-utils';
 import {
   ACTIVITY_CHART,
@@ -47,7 +55,7 @@ const TOP_CONTRIBUTOR_COUNT = 6;
 
 @Component({
   selector: 'app-dashboard',
-  imports: [RouterLink, Skeleton, ChartComponent, ButtonGroup, Select],
+  imports: [RouterLink, Skeleton, ChartComponent, ButtonGroup, Select, DateRangePicker],
   templateUrl: './dashboard.html',
 })
 export class Dashboard {
@@ -58,10 +66,7 @@ export class Dashboard {
   private readonly reposService = inject(ReposService);
   private readonly router = inject(Router);
 
-  protected readonly dateRangeSelectOptions: SelectOption[] = DATE_RANGE_OPTIONS.map(
-    (option) => ({ value: option.key, label: option.label }),
-  );
-  protected readonly dateRangeKey = signal<DateRangeKey>('30d');
+  protected readonly dateRange = signal<DateRange>(defaultDateRange());
   protected readonly selectedRepoId = signal<string>('all');
   protected readonly selectedAuthor = signal<string>('all');
   protected readonly activityView = signal<'bar' | 'heatmap'>('bar');
@@ -73,6 +78,7 @@ export class Dashboard {
   private readonly reposResource = this.reposService.trackedRepos();
   private readonly commitsResource = this.reposService.contributionActivity(
     () => this.since(),
+    () => this.until(),
   );
   protected readonly repos = this.reposResource.value;
 
@@ -98,15 +104,14 @@ export class Dashboard {
   // Computed signals
   // ---------------------------------------------------------------------
 
-  private readonly since = computed(() => {
-    const date = new Date();
-    date.setDate(date.getDate() - RANGE_DAYS[this.dateRangeKey()]);
-    // Date-only, not a full datetime: GitHub's API accepts either, and this
-    // keeps the value stable to the day instead of down to the millisecond -
-    // otherwise every remount of this component (e.g. navigating away and
-    // back) produces a new `since` from `new Date()`, busting the response
-    // cache even when the date-range filter hasn't actually changed.
-    return date.toISOString().slice(0, 10);
+  private readonly since = computed(() => this.dateRange().start);
+  private readonly until = computed(() => this.dateRange().end);
+  // Span of the selected range in days, inclusive of both ends - drives
+  // chart bucket size (see granularityFor) and the heatmap's window.
+  private readonly rangeDays = computed(() => {
+    const { start, end } = this.dateRange();
+    const days = (fromDateKey(end).getTime() - fromDateKey(start).getTime()) / 86_400_000;
+    return Math.round(days) + 1;
   });
 
   protected readonly isLoading = computed(
@@ -185,7 +190,7 @@ export class Dashboard {
   protected readonly totalContributions = computed(() => this.filteredCommits().length);
 
   private readonly activityStack = computed(() => {
-    const granularity = granularityFor(this.dateRangeKey());
+    const granularity = granularityFor(this.rangeDays());
     const bucketOrder: string[] = [];
     const bucketLabels = new Map<string, string>();
     const authorTotals = new Map<string, number>();
@@ -319,11 +324,12 @@ export class Dashboard {
 
   /**
    * A GitHub-style contribution calendar: 7 weekday rows x one column per
-   * week, always spanning a full year regardless of the selected date-range
-   * filter, so the grid's shape stays constant. Days outside the selected
-   * filter (and any not-yet-happened days padding out the final week) are
-   * marked DISABLED_VALUE instead of a real count, so they render as a
-   * distinct dimmed state rather than looking like a real 0-commit day.
+   * week, always spanning a full year ending at the selected range's end
+   * date, so the grid's shape stays constant regardless of the filter. Days
+   * outside the selected range (and any not-yet-happened days padding out
+   * the final week) are marked DISABLED_VALUE instead of a real count, so
+   * they render as a distinct dimmed state rather than looking like a real
+   * 0-commit day.
    */
   private readonly activityCalendar = computed(() => {
     const dayCounts = new Map<string, number>();
@@ -332,10 +338,9 @@ export class Dashboard {
       dayCounts.set(key, (dayCounts.get(key) ?? 0) + 1);
     }
 
-    const end = new Date();
-    end.setHours(0, 0, 0, 0);
-    const rangeStart = new Date(end);
-    rangeStart.setDate(rangeStart.getDate() - RANGE_DAYS[this.dateRangeKey()] + 1);
+    const { start, end: endKey } = this.dateRange();
+    const end = fromDateKey(endKey);
+    const rangeStart = fromDateKey(start);
 
     const yearStart = new Date(end);
     yearStart.setDate(yearStart.getDate() - YEAR_DAYS + 1);
@@ -491,8 +496,8 @@ export class Dashboard {
     this.activityView.set(view);
   }
 
-  protected setDateRange(key: string): void {
-    this.dateRangeKey.set(key as DateRangeKey);
+  protected setDateRange(range: DateRange): void {
+    this.dateRange.set(range);
   }
 
   protected setRepoFilter(repoId: string): void {

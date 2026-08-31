@@ -47,30 +47,37 @@ export class ReposService {
    * resource, every filter change re-enters "loading" for the whole thing,
    * including the repo metadata that didn't actually change.
    */
-  repoCommits(id: () => string | undefined, since: () => string | undefined) {
+  repoCommits(
+    id: () => string | undefined,
+    since: () => string | undefined,
+    until: () => string | undefined,
+  ) {
     return httpResource<RepoCommit[]>(
       () => {
         const repoId = id();
         if (!repoId) return undefined;
-        const sinceValue = since();
         const params: Record<string, string> = {};
-        if (sinceValue) {
-          params['since'] = sinceValue;
-        }
+        const sinceValue = since();
+        const untilValue = until();
+        if (sinceValue) params['since'] = sinceValue;
+        if (untilValue) params['until'] = untilValue;
         return { url: `/api/repos/tracked/${repoId}/commits`, params };
       },
       { defaultValue: [] },
     );
   }
 
-  contributionActivity(since: () => string | undefined) {
+  contributionActivity(
+    since: () => string | undefined,
+    until: () => string | undefined,
+  ) {
     return httpResource<RepoCommitWithContext[]>(
       () => {
-        const sinceValue = since();
         const params: Record<string, string> = {};
-        if (sinceValue) {
-          params['since'] = sinceValue;
-        }
+        const sinceValue = since();
+        const untilValue = until();
+        if (sinceValue) params['since'] = sinceValue;
+        if (untilValue) params['until'] = untilValue;
         return { url: '/api/repos/commits', params };
       },
       { defaultValue: [] },
