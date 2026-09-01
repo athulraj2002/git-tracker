@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/angular';
-import { Button, ButtonVariant } from './button';
+import { Button, ButtonSize, ButtonVariant } from './button';
 
 const meta: Meta<Button & { label: string }> = {
   title: 'UI/Button',
@@ -18,13 +18,29 @@ const meta: Meta<Button & { label: string }> = {
       options: [
         'primary',
         'secondary',
-        'danger',
-        'ghost',
         'outline',
+        'ghost',
+        'link',
+        'destructive',
       ] satisfies ButtonVariant[],
       description: 'Visual style of the button',
       table: {
         defaultValue: { summary: 'primary' },
+      },
+    },
+    size: {
+      control: 'select',
+      options: ['xs', 'sm', 'default', 'lg'] satisfies ButtonSize[],
+      description: 'Height/padding scale of the button',
+      table: {
+        defaultValue: { summary: 'default' },
+      },
+    },
+    invalid: {
+      control: 'boolean',
+      description: 'Shows the error-state ring, independent of variant',
+      table: {
+        defaultValue: { summary: 'false' },
       },
     },
     disabled: {
@@ -59,7 +75,7 @@ const meta: Meta<Button & { label: string }> = {
   },
   render: (args) => ({
     props: args,
-    template: `<lib-ui-button [variant]="variant" [disabled]="disabled" [type]="type" [isLoading]="isLoading" [class]="class">{{ label }}</lib-ui-button>`,
+    template: `<lib-ui-button [variant]="variant" [size]="size" [invalid]="invalid" [disabled]="disabled" [type]="type" [isLoading]="isLoading" [class]="class">{{ label }}</lib-ui-button>`,
   }),
 };
 
@@ -72,6 +88,8 @@ export const Primary: Story = {
   args: {
     label: 'Button',
     variant: 'primary',
+    size: 'default',
+    invalid: false,
     disabled: false,
     isLoading: false,
     type: 'button',
@@ -82,26 +100,7 @@ export const Secondary: Story = {
   args: {
     label: 'Button',
     variant: 'secondary',
-    disabled: false,
-    isLoading: false,
-    type: 'button',
-  },
-};
-
-export const Danger: Story = {
-  args: {
-    label: 'Delete',
-    variant: 'danger',
-    disabled: false,
-    isLoading: false,
-    type: 'button',
-  },
-};
-
-export const Ghost: Story = {
-  args: {
-    label: 'Button',
-    variant: 'ghost',
+    size: 'default',
     disabled: false,
     isLoading: false,
     type: 'button',
@@ -112,19 +111,66 @@ export const Outline: Story = {
   args: {
     label: 'Button',
     variant: 'outline',
+    size: 'default',
     disabled: false,
     isLoading: false,
     type: 'button',
   },
 };
 
-// ─── Disabled state ────────────────────────────────────────────────────────
+export const Ghost: Story = {
+  args: {
+    label: 'Button',
+    variant: 'ghost',
+    size: 'default',
+    disabled: false,
+    isLoading: false,
+    type: 'button',
+  },
+};
+
+export const Link: Story = {
+  args: {
+    label: 'Button',
+    variant: 'link',
+    size: 'default',
+    disabled: false,
+    isLoading: false,
+    type: 'button',
+  },
+};
+
+export const Destructive: Story = {
+  args: {
+    label: 'Delete',
+    variant: 'destructive',
+    size: 'default',
+    disabled: false,
+    isLoading: false,
+    type: 'button',
+  },
+};
+
+// ─── States ────────────────────────────────────────────────────────────────
 
 export const Disabled: Story = {
   args: {
     label: 'Disabled',
     variant: 'primary',
+    size: 'default',
     disabled: true,
+    isLoading: false,
+    type: 'button',
+  },
+};
+
+export const Invalid: Story = {
+  args: {
+    label: 'Button',
+    variant: 'outline',
+    size: 'default',
+    invalid: true,
+    disabled: false,
     isLoading: false,
     type: 'button',
   },
@@ -152,9 +198,20 @@ export const AllVariants: Story = {
           <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center;">
             <lib-ui-button variant="primary">Primary</lib-ui-button>
             <lib-ui-button variant="secondary">Secondary</lib-ui-button>
-            <lib-ui-button variant="danger">Danger</lib-ui-button>
-            <lib-ui-button variant="ghost">Ghost</lib-ui-button>
             <lib-ui-button variant="outline">Outline</lib-ui-button>
+            <lib-ui-button variant="ghost">Ghost</lib-ui-button>
+            <lib-ui-button variant="link">Link</lib-ui-button>
+            <lib-ui-button variant="destructive">Destructive</lib-ui-button>
+          </div>
+        </div>
+
+        <div>
+          <p style="margin:0 0 10px; font-size:12px; color:#888; text-transform:uppercase; letter-spacing:.05em;">Sizes</p>
+          <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center;">
+            <lib-ui-button variant="primary" size="xs">Extra small</lib-ui-button>
+            <lib-ui-button variant="primary" size="sm">Small</lib-ui-button>
+            <lib-ui-button variant="primary" size="default">Default</lib-ui-button>
+            <lib-ui-button variant="primary" size="lg">Large</lib-ui-button>
           </div>
         </div>
 
@@ -163,9 +220,18 @@ export const AllVariants: Story = {
           <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center;">
             <lib-ui-button variant="primary" [disabled]="true">Primary</lib-ui-button>
             <lib-ui-button variant="secondary" [disabled]="true">Secondary</lib-ui-button>
-            <lib-ui-button variant="danger" [disabled]="true">Danger</lib-ui-button>
-            <lib-ui-button variant="ghost" [disabled]="true">Ghost</lib-ui-button>
             <lib-ui-button variant="outline" [disabled]="true">Outline</lib-ui-button>
+            <lib-ui-button variant="ghost" [disabled]="true">Ghost</lib-ui-button>
+            <lib-ui-button variant="destructive" [disabled]="true">Destructive</lib-ui-button>
+          </div>
+        </div>
+
+        <div>
+          <p style="margin:0 0 10px; font-size:12px; color:#888; text-transform:uppercase; letter-spacing:.05em;">Invalid</p>
+          <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center;">
+            <lib-ui-button variant="primary" [invalid]="true">Primary</lib-ui-button>
+            <lib-ui-button variant="outline" [invalid]="true">Outline</lib-ui-button>
+            <lib-ui-button variant="destructive" [invalid]="true">Destructive</lib-ui-button>
           </div>
         </div>
 
@@ -174,7 +240,7 @@ export const AllVariants: Story = {
           <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center;">
             <lib-ui-button variant="primary" [isLoading]="true" [disabled]="true">Saving</lib-ui-button>
             <lib-ui-button variant="secondary" [isLoading]="true" [disabled]="true">Loading</lib-ui-button>
-            <lib-ui-button variant="danger" [isLoading]="true" [disabled]="true">Deleting</lib-ui-button>
+            <lib-ui-button variant="destructive" [isLoading]="true" [disabled]="true">Deleting</lib-ui-button>
           </div>
         </div>
 
@@ -185,7 +251,7 @@ export const AllVariants: Story = {
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
               Download
             </lib-ui-button>
-            <lib-ui-button variant="danger">
+            <lib-ui-button variant="destructive">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
               Delete
             </lib-ui-button>
