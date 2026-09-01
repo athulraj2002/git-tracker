@@ -1,13 +1,23 @@
 import type { Meta, StoryObj } from '@storybook/angular';
-import { ButtonGroup } from './button-group';
+import { ButtonGroup, ButtonGroupSize } from './button-group';
 
 const meta: Meta<ButtonGroup> = {
   title: 'UI/ButtonGroup',
   component: ButtonGroup,
   tags: ['autodocs'],
+  argTypes: {
+    size: {
+      control: 'select',
+      options: ['xs', 'sm', 'default', 'lg'] satisfies ButtonGroupSize[],
+      description: 'Height/padding scale of each segment',
+      table: {
+        defaultValue: { summary: 'sm' },
+      },
+    },
+  },
   render: (args) => ({
     props: args,
-    template: `<lib-ui-button-group [options]="options" [value]="value"></lib-ui-button-group>`,
+    template: `<lib-ui-button-group [options]="options" [value]="value" [size]="size"></lib-ui-button-group>`,
   }),
 };
 
@@ -21,6 +31,7 @@ export const Default: Story = {
       { value: 'heatmap', label: 'Heatmap' },
     ],
     value: 'bar',
+    size: 'sm',
   },
 };
 
@@ -32,5 +43,19 @@ export const ThreeOptions: Story = {
       { value: 'month', label: 'Month' },
     ],
     value: 'week',
+    size: 'sm',
   },
+};
+
+export const Sizes: Story = {
+  render: () => ({
+    template: `
+      <div style="display:flex; flex-direction:column; gap:16px; align-items:flex-start; padding:24px; font-family:sans-serif;">
+        <lib-ui-button-group [options]="[{value:'a',label:'Bars'},{value:'b',label:'Heatmap'}]" value="a" size="xs"></lib-ui-button-group>
+        <lib-ui-button-group [options]="[{value:'a',label:'Bars'},{value:'b',label:'Heatmap'}]" value="a" size="sm"></lib-ui-button-group>
+        <lib-ui-button-group [options]="[{value:'a',label:'Bars'},{value:'b',label:'Heatmap'}]" value="a" size="default"></lib-ui-button-group>
+        <lib-ui-button-group [options]="[{value:'a',label:'Bars'},{value:'b',label:'Heatmap'}]" value="a" size="lg"></lib-ui-button-group>
+      </div>
+    `,
+  }),
 };

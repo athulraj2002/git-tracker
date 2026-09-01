@@ -1,16 +1,26 @@
-<div
-  class="flex items-center gap-0.5 bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg p-0.5"
->
-  @for (option of options(); track option.value) {
+<div class="inline-flex items-center">
+  @for (option of options(); track option.value; let first = $first; let last = $last) {
   <button
     type="button"
-    class="px-2 py-1 rounded-md text-xs transition-colors cursor-pointer"
-    [class.bg-white]="value() === option.value"
-    [class.dark:bg-gray-800]="value() === option.value"
-    [class.text-gray-900]="value() === option.value"
-    [class.dark:text-white]="value() === option.value"
-    [class.shadow-sm]="value() === option.value"
-    [class.text-gray-500]="value() !== option.value"
+    [class]="segmentClasses()"
+    class="relative border font-medium transition-colors cursor-pointer focus:outline-none focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-gray-400 dark:focus-visible:ring-gray-600"
+    [class.rounded-l-lg]="first"
+    [class.rounded-r-lg]="last"
+    [class.-ml-px]="!first"
+    [class.bg-gray-900]="isActive(option.value)"
+    [class.dark:bg-white]="isActive(option.value)"
+    [class.text-white]="isActive(option.value)"
+    [class.dark:text-black]="isActive(option.value)"
+    [class.border-gray-900]="isActive(option.value)"
+    [class.dark:border-white]="isActive(option.value)"
+    [class.bg-white]="!isActive(option.value)"
+    [class.dark:bg-gray-900]="!isActive(option.value)"
+    [class.text-gray-700]="!isActive(option.value)"
+    [class.dark:text-gray-300]="!isActive(option.value)"
+    [class.border-neutral-200]="!isActive(option.value)"
+    [class.dark:border-gray-700]="!isActive(option.value)"
+    [class.hover:bg-gray-100]="!isActive(option.value)"
+    [class.dark:hover:bg-gray-800]="!isActive(option.value)"
     (click)="value.set(option.value)"
   >
     {{ option.label }}
