@@ -23,6 +23,7 @@ import type {
   SelectedRepo,
   TrackedRepo,
 } from '@org/types';
+import { COMMIT_CACHE_TTL_MS } from '@org/helpers';
 
 import { DRIZZLE, type DrizzleDb } from '../database/database.module';
 import {
@@ -32,12 +33,6 @@ import {
   type RepoCommitRow,
 } from '../database/schema';
 import { GithubReposService } from './github-repos.service';
-
-// How long a repo's cached commits are trusted before a request triggers a
-// re-sync from GitHub. Short enough that new commits show up promptly,
-// long enough that repeat requests within a browsing session (switching
-// date filters, revisiting a page) don't re-hit GitHub at all.
-const COMMIT_SYNC_TTL_MS = 10 * 60 * 1000;
 
 @Injectable()
 export class ReposService {
@@ -225,7 +220,7 @@ export class ReposService {
 
   /**
    * Refreshes the commit cache for one repo, but only if it's stale (never
-   * synced, or older than COMMIT_SYNC_TTL_MS) - repeat calls within the TTL
+   * synced, or older than COMMIT_CACHE_TTL_MS) - repeat calls within the TTL
    * window are a no-op, so switching date filters or revisiting a page
    * doesn't re-hit GitHub. A never-synced repo gets a fuller backfill (most
    * recent 300 commits); an already-synced repo only fetches what's new
@@ -237,7 +232,7 @@ export class ReposService {
   ): Promise<void> {
     const isStale =
       !row.commitsSyncedAt ||
-      Date.now() - row.commitsSyncedAt.getTime() > COMMIT_SYNC_TTL_MS;
+      Date.now() - row.commitsSyncedAt.getTime() > COMMIT_CACHE_TTL_MS;
     if (!isStale) return;
 
     const fetched = await this.githubReposService.getCommits(

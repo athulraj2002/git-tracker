@@ -1,12 +1,17 @@
 import { Service } from '@angular/core';
 import type { HttpResponse } from '@angular/common/http';
+import { COMMIT_CACHE_TTL_MS } from '@org/helpers';
 
 interface CacheEntry {
   response: HttpResponse<unknown>;
   expiresAt: number;
 }
 
-const TTL_MS = 30_000;
+// Matches the backend's own commit-cache TTL (ReposService.syncCommitsIfStale)
+// rather than a separately-tuned number - the backend won't return anything
+// new within that window anyway, so re-fetching sooner than that from here
+// would just be an extra round trip for the same response.
+const TTL_MS = COMMIT_CACHE_TTL_MS;
 
 @Service()
 export class HttpCacheService {

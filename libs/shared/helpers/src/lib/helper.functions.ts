@@ -1,3 +1,10 @@
+// How long the backend trusts its own commit cache before re-syncing from
+// GitHub (see ReposService.syncCommitsIfStale) - shared so the frontend's
+// response cache can use the same window instead of a separately-tuned
+// number that could drift out of sync with it. There's no point the
+// frontend re-fetching sooner than the backend would return anything new.
+export const COMMIT_CACHE_TTL_MS = 10 * 60 * 1000;
+
 export type Granularity = 'day' | 'week' | 'month';
 
 /**

@@ -101,6 +101,7 @@
     "@nestjs/core": "^11.0.0",
     "@nestjs/jwt": "^11.0.2",
     "@nestjs/platform-express": "^11.0.0",
+    "@org/helpers": "0.0.1",
     "@org/types": "0.0.1",
     "@org/zod-schemas": "0.0.1",
     "drizzle-orm": "^0.45.2",
