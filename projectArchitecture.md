@@ -26,14 +26,19 @@ this document describes what actually exists in the codebase today.
   caches GET responses for a short TTL, keyed by full URL, and clears on any
   mutation or logout — cuts down on duplicate fetches (e.g. `GET
   /repos/tracked` firing again every time the router recreates a sidenav
-  page). This is separate from — and doesn't replace — the backend-side
-  GitHub response cache still on the roadmap (see Not yet implemented).
+  page).
+- Backend commit cache: a Postgres table (`repo_commits`), not Redis — see
+  Database Module. Both this and the front-end response cache above share
+  one TTL constant, `COMMIT_CACHE_TTL_MS` (10 minutes) in `@org/helpers`,
+  so they can't independently drift out of sync with each other.
 
 ### Not yet implemented (see Future Enhancements)
 
-Cache (Redis), background queue (BullMQ), webhooks, AI (OpenAI API), Slack
+Redis, background queue (BullMQ), webhooks, AI (OpenAI API), Slack
 integration. Nothing in `package.json` currently depends on any of these —
-they're aspirational, not partially-built.
+they're aspirational, not partially-built. (GitHub response caching itself
+*is* built now, just on Postgres — see above — not Redis as originally
+planned.)
 
 ---
 
@@ -173,8 +178,9 @@ One-shot imperative actions (login redirect, route guards, mutations like
 ## 📊 Metrics Currently Computed
 
 All computed client-side on the dashboard from `GET /api/repos/commits`
-(which the backend aggregates live from the GitHub API per tracked repo —
-nothing is pre-computed or persisted server-side):
+(which the backend now serves from its own Postgres commit cache — see
+Database Module — re-syncing a given repo from GitHub only once its cache
+entry is older than `COMMIT_CACHE_TTL_MS`, not on every request):
 
 - **Total contributions** — commit count for the selected date range / repo
   / contributor filter combination
@@ -224,24 +230,40 @@ yet, only commit data fetched on demand.
   rather than deleting the row, so its cached metadata survives being
   untracked and doesn't need re-fetching if tracked again later.
 - `GET /repos/tracked/:id` — one repo's detail (tracked or not, as long as
-  it's been synced via `GET /repos/available` at least once) + its 10 most
-  recent commits.
-- `GET /repos/commits?since=` — commits aggregated across every **tracked**
-  repo in parallel (a single repo failing doesn't fail the whole request).
-  `since` is a plain date (`YYYY-MM-DD`, not a full datetime) — the frontend
-  deliberately keeps it stable to the day so the response cache (see Tech
-  Stack) actually gets hit on repeat visits within the same day.
+  it's been synced via `GET /repos/available` at least once). Metadata
+  only — the repo-detail page fetches commits from the endpoint below
+  separately, so this doesn't sync or return any.
+- `GET /repos/tracked/:id/commits?since=&until=` — commits for one repo.
+  Syncs that repo's commit cache first (see Database Module) if it's
+  stale, then serves from Postgres; `since`/`until` filter the cached
+  rows, not a fresh GitHub call.
+- `GET /repos/commits?since=&until=` — commits aggregated across every
+  **tracked** repo. Syncs every stale tracked repo in parallel first (a
+  single repo failing doesn't fail the whole request), then answers with
+  one Postgres query across all of them instead of one GitHub call per
+  repo. `since`/`until` are plain dates (`YYYY-MM-DD`) — an `until` is
+  treated as inclusive through the end of that day.
 
 ### Backend: Database Module (`apps/api/src/app/modules/database`)
 
-- Drizzle schema: `users`, `user_identities`, `tracked_repos`.
+- Drizzle schema: `users`, `user_identities`, `tracked_repos`, `repo_commits`.
 - `tracked_repos` is a **unified table**, not just "tracked" repos despite
   the name: it holds a row for every repo the user's GitHub token can see,
   once synced. `tracked_at` (nullable) is the only column tracking state —
   `null` = discovered but not tracked, set = actively tracked. `synced_at`
-  records the last metadata refresh. This means repo **metadata** is
-  cached server-side; commit data is still fetched live from GitHub on
-  every request, no commit/PR/metrics tables exist yet.
+  records the last **metadata** refresh (name, stars, language, etc.) —
+  separate from `commits_synced_at`, which tracks commit-cache freshness
+  and is only ever touched by the commit sync described below.
+- `repo_commits` caches each tracked repo's commit history (unique on
+  `repo_id` + `sha`, indexed on `repo_id` + `committed_at`). Commits are
+  immutable once made, so rows are only ever inserted
+  (`onConflictDoNothing`), never updated. `ReposService.syncCommitsIfStale`
+  gates every read: if a repo's `commits_synced_at` is null or older than
+  `COMMIT_CACHE_TTL_MS`, it fetches from GitHub first — a never-synced
+  repo gets a 300-commit backfill, an already-synced one only fetches
+  what's new `since` the last sync — then serves the request from
+  Postgres either way. Repeat requests inside the TTL window (switching
+  date filters, revisiting a page) never touch GitHub at all.
 
 ### Frontend pages
 
@@ -276,14 +298,18 @@ yet, only commit data fetched on demand.
 
 - ✅ OAuth setup (GitHub, GitLab, Bitbucket sign-in)
 - ✅ Fetch repos (GitHub only)
-- ✅ Fetch commits (GitHub only, live per-request — no persistence)
+- ✅ Fetch commits (GitHub only, now cached in Postgres with a TTL-gated
+  re-sync rather than fetched fresh every request)
 - [ ] Fetch PRs
-- [ ] Webhook endpoint (everything is pull-based today)
+- [ ] Webhook endpoint (everything is still pull-based, just cached now —
+      new commits show up on the next sync after the cache goes stale,
+      not the instant they land)
 - [ ] Wire GitLab/Bitbucket repo tracking (currently sign-in only)
 
-### Phase 3 – Analytics Engine (simplified, no persistence)
+### Phase 3 – Analytics Engine (simplified)
 
-- [ ] Store raw data — currently fetched live on every request, not stored
+- ✅ Store raw data — commits are cached server-side (`repo_commits`);
+  repo/PR metadata beyond that still isn't
 - ✅ Implement metrics — contribution counts/breakdowns only (see above)
 - ✅ Validate using Zod schemas (request/response shapes, not metrics math)
 
@@ -296,8 +322,9 @@ yet, only commit data fetched on demand.
 ### Phase 5 – Advanced Metrics
 
 - [ ] PR review analytics
-- [ ] Trends over longer history (currently capped by GitHub API pagination
-      per request — no stored history to trend against)
+- [ ] Trends over longer history — the commit cache's initial backfill per
+      repo is still capped at 300 commits, though it grows incrementally
+      past that from there since every sync only adds what's new
 - [ ] Leaderboards
 
 ### Phase 6 – Slack — not started
@@ -362,6 +389,8 @@ yet, only commit data fetched on demand.
   table with nullable `tracked_at`), so repo detail is viewable and
   survives untracking without a GitHub re-fetch
 - ✅ Commits API (per-repo + aggregated)
+- ✅ Commit caching (Postgres `repo_commits`, TTL-gated re-sync instead of
+  a GitHub call on every request)
 - [ ] PR API
 - [ ] Webhooks (currently pull-based only)
 - [ ] GitLab/Bitbucket repo tracking (sign-in only today)
@@ -372,7 +401,8 @@ yet, only commit data fetched on demand.
 - ✅ Filter bar (date range / repo / contributor)
 - ✅ Charts (ApexCharts, stacked)
 - ✅ Heatmap
-- ✅ Front-end response cache (short-TTL, cleared on mutation/logout)
+- ✅ Front-end response cache (short-TTL, cleared on mutation/logout) —
+  shares its TTL constant with the backend commit cache (`@org/helpers`)
 
 ### 🔹 AI — not started
 
@@ -387,18 +417,21 @@ yet, only commit data fetched on demand.
 - Zod = contract + validation (critical) — keep it that way
 - Avoid DTO duplication — use `@org/types`
 - Repo **metadata** (name, stars, language, etc.) is cached server-side via
-  upsert into `tracked_repos`; commit data is still fetched **live on
-  every request**, not cached or webhook-driven yet — expect latency
-  proportional to tracked-repo count for commit-heavy views, and revisit
-  before this needs to scale
+  upsert into `tracked_repos`; **commits** are now cached too
+  (`repo_commits`, TTL-gated re-sync — see Database Module). What's still
+  live on every call: `GET /repos/available` itself always upserts the
+  current GitHub listing, unconditionally, no TTL check
 - Focus on team insights, not individual surveillance
 
 ---
 
 ## 🚀 Future Enhancements
 
-- Cache GitHub responses (Redis)
-- Background jobs / webhooks instead of live per-request fetches (BullMQ)
+- TTL-gate `GET /repos/available`'s repo-listing upsert the same way
+  commits are now cached, instead of always hitting GitHub live
+- Background jobs / webhooks instead of a request-triggered cache sync
+  (BullMQ) — commits only refresh when someone asks, not the instant
+  they land upstream
 - GitLab/Bitbucket repo tracking (beyond sign-in)
 - PR review analytics, Lead Time, Code Churn, trends, leaderboards
 - AI-driven insights (OpenAI API) over structured metrics
