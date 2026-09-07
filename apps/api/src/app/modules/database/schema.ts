@@ -1,5 +1,6 @@
 import {
   boolean,
+  index,
   integer,
   pgEnum,
   pgTable,
@@ -78,11 +79,44 @@ export const trackedRepos = pgTable(
     syncedAt: timestamp('synced_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
+    // Null = commits never synced for this repo. Set after each commit sync
+    // (see repoCommits below); a request only re-hits GitHub once this is
+    // older than the sync TTL, so repeat requests within that window are
+    // served entirely from the cache.
+    commitsSyncedAt: timestamp('commits_synced_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
   },
   (table) => [unique().on(table.userId, table.provider, table.providerRepoId)],
+);
+
+// A cache of each tracked repo's commit history, populated incrementally by
+// ReposService's sync step rather than fetched fresh from GitHub per
+// request. Commits are immutable once made, so rows are only ever inserted
+// (via onConflictDoNothing on the repoId+sha unique constraint), never
+// updated - there's nothing to keep in sync besides new commits appearing.
+export const repoCommits = pgTable(
+  'repo_commits',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    repoId: uuid('repo_id')
+      .notNull()
+      .references(() => trackedRepos.id, { onDelete: 'cascade' }),
+    sha: text('sha').notNull(),
+    message: text('message').notNull(),
+    authorLogin: text('author_login'),
+    authorAvatarUrl: text('author_avatar_url'),
+    committedAt: timestamp('committed_at', { withTimezone: true }).notNull(),
+    htmlUrl: text('html_url').notNull(),
+  },
+  (table) => [
+    unique().on(table.repoId, table.sha),
+    index('repo_commits_repo_id_committed_at_idx').on(
+      table.repoId,
+      table.committedAt,
+    ),
+  ],
 );
 
 export type User = typeof users.$inferSelect;
@@ -91,3 +125,5 @@ export type UserIdentity = typeof userIdentities.$inferSelect;
 export type NewUserIdentity = typeof userIdentities.$inferInsert;
 export type TrackedRepo = typeof trackedRepos.$inferSelect;
 export type NewTrackedRepo = typeof trackedRepos.$inferInsert;
+export type RepoCommitRow = typeof repoCommits.$inferSelect;
+export type NewRepoCommitRow = typeof repoCommits.$inferInsert;

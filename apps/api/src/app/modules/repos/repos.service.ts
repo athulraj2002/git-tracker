@@ -4,7 +4,17 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, eq, isNotNull, notInArray, sql } from 'drizzle-orm';
+import {
+  and,
+  desc,
+  eq,
+  gte,
+  inArray,
+  isNotNull,
+  lte,
+  notInArray,
+  sql,
+} from 'drizzle-orm';
 import type {
   AvailableRepo,
   RepoCommit,
@@ -15,8 +25,19 @@ import type {
 } from '@org/types';
 
 import { DRIZZLE, type DrizzleDb } from '../database/database.module';
-import { trackedRepos, userIdentities } from '../database/schema';
+import {
+  repoCommits,
+  trackedRepos,
+  userIdentities,
+  type RepoCommitRow,
+} from '../database/schema';
 import { GithubReposService } from './github-repos.service';
+
+// How long a repo's cached commits are trusted before a request triggers a
+// re-sync from GitHub. Short enough that new commits show up promptly,
+// long enough that repeat requests within a browsing session (switching
+// date filters, revisiting a page) don't re-hit GitHub at all.
+const COMMIT_SYNC_TTL_MS = 10 * 60 * 1000;
 
 @Injectable()
 export class ReposService {
@@ -106,18 +127,17 @@ export class ReposService {
     return rows.map(toTrackedRepo);
   }
 
+  /**
+   * The repo-detail page fetches its own commits separately (see
+   * getRepoCommits) and never reads this response's commit list, so this
+   * only ever needs the repo metadata - no GitHub call, no cache sync.
+   */
   async getRepoDetail(
     userId: string,
     repoId: string,
   ): Promise<RepoDetailResponse> {
     const row = await this.findTrackedRepoRow(userId, repoId);
-    const identity = await this.getGithubIdentity(userId);
-    const commits = await this.githubReposService.getCommits(
-      identity.accessToken as string,
-      row.fullName,
-    );
-
-    return { repo: toTrackedRepo(row), commits };
+    return { repo: toTrackedRepo(row) };
   }
 
   /**
@@ -134,15 +154,21 @@ export class ReposService {
   ): Promise<RepoCommit[]> {
     const row = await this.findTrackedRepoRow(userId, repoId);
     const identity = await this.getGithubIdentity(userId);
-    // maxPages: 3 (up to 300 commits) so a wider date-range selection can
-    // actually surface more history for an active repo - GitHub returns the
-    // newest `perPage` commits matching `since`, so a single page can't tell
-    // a 7-day window from a 365-day one once a repo has 100+ recent commits.
-    return this.githubReposService.getCommits(
-      identity.accessToken as string,
-      row.fullName,
-      { since, until, perPage: 100, maxPages: 3 },
-    );
+    await this.syncCommitsIfStale(row, identity.accessToken as string);
+
+    const conditions = [eq(repoCommits.repoId, row.id)];
+    if (since) conditions.push(gte(repoCommits.committedAt, new Date(since)));
+    if (until) conditions.push(lte(repoCommits.committedAt, endOfDayUtc(until)));
+
+    // limit: 300 to match the old GitHub-direct cap (maxPages: 3 x
+    // perPage: 100), so a wide date-range selection doesn't return an
+    // unbounded result for a very active repo.
+    const rows = await this.db.query.repoCommits.findMany({
+      where: and(...conditions),
+      orderBy: [desc(repoCommits.committedAt)],
+      limit: 300,
+    });
+    return rows.map(toRepoCommit);
   }
 
   async getContributionActivity(
@@ -150,37 +176,101 @@ export class ReposService {
     since?: string,
     until?: string,
   ): Promise<RepoCommitWithContext[]> {
-    const repos = await this.getTrackedRepos(userId);
-    if (repos.length === 0) {
+    const rows = await this.db.query.trackedRepos.findMany({
+      where: and(
+        eq(trackedRepos.userId, userId),
+        isNotNull(trackedRepos.trackedAt),
+      ),
+    });
+    if (rows.length === 0) {
       return [];
     }
 
     const identity = await this.getGithubIdentity(userId);
     const accessToken = identity.accessToken as string;
 
-    const perRepoCommits = await Promise.all(
-      repos.map(async (repo) => {
+    await Promise.all(
+      rows.map(async (row) => {
         try {
-          const commits = await this.githubReposService.getCommits(
-            accessToken,
-            repo.fullName,
-            { since, until, perPage: 100 },
-          );
-          return commits.map((commit) => ({
-            ...commit,
-            repoId: repo.id,
-            repoFullName: repo.fullName,
-          }));
+          await this.syncCommitsIfStale(row, accessToken);
         } catch {
           // A single inaccessible/renamed/empty repo shouldn't fail the whole dashboard.
-          return [];
         }
       }),
     );
 
-    return perRepoCommits
-      .flat()
+    const conditions = [
+      inArray(
+        repoCommits.repoId,
+        rows.map((row) => row.id),
+      ),
+    ];
+    if (since) conditions.push(gte(repoCommits.committedAt, new Date(since)));
+    if (until) conditions.push(lte(repoCommits.committedAt, endOfDayUtc(until)));
+
+    const commitRows = await this.db.query.repoCommits.findMany({
+      where: and(...conditions),
+      orderBy: [desc(repoCommits.committedAt)],
+    });
+
+    const fullNameByRepoId = new Map(rows.map((row) => [row.id, row.fullName]));
+    return commitRows
+      .map((row) => ({
+        ...toRepoCommit(row),
+        repoId: row.repoId,
+        repoFullName: fullNameByRepoId.get(row.repoId) ?? '',
+      }))
       .sort((a, b) => b.committedAt.localeCompare(a.committedAt));
+  }
+
+  /**
+   * Refreshes the commit cache for one repo, but only if it's stale (never
+   * synced, or older than COMMIT_SYNC_TTL_MS) - repeat calls within the TTL
+   * window are a no-op, so switching date filters or revisiting a page
+   * doesn't re-hit GitHub. A never-synced repo gets a fuller backfill (most
+   * recent 300 commits); an already-synced repo only fetches what's new
+   * since last time, since everything older is already cached.
+   */
+  private async syncCommitsIfStale(
+    row: typeof trackedRepos.$inferSelect,
+    accessToken: string,
+  ): Promise<void> {
+    const isStale =
+      !row.commitsSyncedAt ||
+      Date.now() - row.commitsSyncedAt.getTime() > COMMIT_SYNC_TTL_MS;
+    if (!isStale) return;
+
+    const fetched = await this.githubReposService.getCommits(
+      accessToken,
+      row.fullName,
+      row.commitsSyncedAt
+        ? { since: row.commitsSyncedAt.toISOString(), perPage: 100, maxPages: 3 }
+        : { perPage: 100, maxPages: 3 },
+    );
+
+    if (fetched.length > 0) {
+      await this.db
+        .insert(repoCommits)
+        .values(
+          fetched.map((commit) => ({
+            repoId: row.id,
+            sha: commit.sha,
+            message: commit.message,
+            authorLogin: commit.authorLogin,
+            authorAvatarUrl: commit.authorAvatarUrl,
+            committedAt: new Date(commit.committedAt),
+            htmlUrl: commit.htmlUrl,
+          })),
+        )
+        // Commits are immutable once made - nothing to update on a repeat
+        // sighting, just skip it.
+        .onConflictDoNothing({ target: [repoCommits.repoId, repoCommits.sha] });
+    }
+
+    await this.db
+      .update(trackedRepos)
+      .set({ commitsSyncedAt: new Date() })
+      .where(eq(trackedRepos.id, row.id));
   }
 
   /**
@@ -341,4 +431,23 @@ function toTrackedRepo(row: typeof trackedRepos.$inferSelect): TrackedRepo {
     trackedAt: row.trackedAt ? row.trackedAt.toISOString() : null,
     createdAt: row.createdAt.toISOString(),
   };
+}
+
+function toRepoCommit(row: RepoCommitRow): RepoCommit {
+  return {
+    sha: row.sha,
+    message: row.message,
+    authorLogin: row.authorLogin,
+    authorAvatarUrl: row.authorAvatarUrl,
+    committedAt: row.committedAt.toISOString(),
+    htmlUrl: row.htmlUrl,
+  };
+}
+
+// A plain `until` date is midnight UTC, which would exclude same-day
+// commits made after that instant - push it to the end of that day instead,
+// matching the inclusive-end-date semantics GithubReposService.getCommits
+// already applies when it calls GitHub directly.
+function endOfDayUtc(date: string): Date {
+  return new Date(`${date}T23:59:59.999Z`);
 }

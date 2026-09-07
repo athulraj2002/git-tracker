@@ -57,9 +57,10 @@ export const RepoCommitSchema = z.object({
   htmlUrl: z.string().url(),
 });
 
+// The repo-detail page fetches its commits separately (GET
+// /repos/tracked/:id/commits), so this only ever needs the repo metadata.
 export const RepoDetailResponseSchema = z.object({
   repo: TrackedRepoSchema,
-  commits: z.array(RepoCommitSchema),
 });
 
 export const RepoCommitWithContextSchema = RepoCommitSchema.extend({
